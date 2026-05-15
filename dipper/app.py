@@ -15,7 +15,7 @@ from dipper.constants import GROUP_COLOURS, WRITE_KEY
 from dipper.highlight import highlighted_lines
 from dipper.model import DocumentModel, LineState
 from dipper.output import render_output
-from dipper.widgets import AnnotationModal, RenameModal
+from dipper.widgets import AnnotationModal, CommandModal, RenameModal
 
 
 class GroupProvider(Provider):
@@ -56,6 +56,9 @@ class GroupProvider(Provider):
 class LineListView(ListView):
     """Annotatable line list backed by Textual ListView."""
 
+    class LineToggled(Message):
+        pass
+
     BINDINGS = [
         Binding("tab", "toggle_line", "Select line", priority=True),
     ]
@@ -65,6 +68,7 @@ class LineListView(ListView):
         self._model = model
         self._hi_lines = hi_lines
         self._gutter_width = len(str(len(hi_lines))) + 1
+        self._match_indices: set[int] = set()
         items = [
             ListItem(Static(self._line_text(idx), markup=False), id=f"l{idx}")
             for idx in range(len(hi_lines))
@@ -80,7 +84,8 @@ class LineListView(ListView):
             hi_text.stylize(f"bold {colour}")
 
         line_num = str(idx + 1).rjust(self._gutter_width)
-        gutter = Text(f"{line_num} ", style="dim")
+        gutter_style = "bold yellow" if idx in self._match_indices else "dim"
+        gutter = Text(f"{line_num} ", style=gutter_style)
 
         if line.group != 0:
             colour = GROUP_COLOURS[line.group]
@@ -93,12 +98,19 @@ class LineListView(ListView):
     def _redraw_line(self, idx: int) -> None:
         self.query_one(f"#l{idx} Static", Static).update(self._line_text(idx))
 
+    def set_matches(self, indices: set[int]) -> None:
+        old = self._match_indices
+        self._match_indices = indices
+        for idx in old.symmetric_difference(indices):
+            self._redraw_line(idx)
+
     def action_toggle_line(self) -> None:
         idx = self.index
         if idx is None:
             return
         self._model.toggle_line(idx)
         self._redraw_line(idx)
+        self.post_message(self.LineToggled())
 
     @property
     def cursor_index(self) -> int:
@@ -160,6 +172,9 @@ class ClipperApp(App):
         self._header = header
         self._output_lines = output_lines
         self._output_summary = output_summary
+        self._search_pattern: str = ""
+        self._match_indices: list[int] = []
+        self._match_cursor: int = 0
         if prompt is not None:
             self.sub_title = prompt
 
@@ -206,6 +221,14 @@ class ClipperApp(App):
                 result.append(annotation.text, style="dim")
                 result.append("  |  edit", style="dim")
 
+        if self._search_pattern:
+            if self._match_indices:
+                pos = self._match_cursor + 1
+                total = len(self._match_indices)
+                result.append(f"  |  /{self._search_pattern} [{pos}/{total}]", style="bold yellow")
+            else:
+                result.append(f"  |  /{self._search_pattern} [no matches]", style="dim yellow")
+
         result.append(f"  |  {self._filename}", style="dim")
         return result
 
@@ -216,6 +239,9 @@ class ClipperApp(App):
         return self.query_one(LineListView)
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        self._refresh_status()
+
+    def on_line_list_view_line_toggled(self, event: LineListView.LineToggled) -> None:
         self._refresh_status()
 
     def _on_rename_dismiss(self, group: int, result: str) -> None:
@@ -254,13 +280,105 @@ class ClipperApp(App):
         self.exit(None)
 
     def _jump_to_line(self, idx: int) -> None:
-        self._line_view().move_cursor(idx)
+        lv = self._line_view()
+        lv.index = idx
+        lv.scroll_to_widget(lv.query_one(f"#l{idx}"))
 
     def _noop(self) -> None:
         pass
 
     def on_line_list_view_group_selected(self, event: LineListView.GroupSelected) -> None:
         self._refresh_status()
+
+    def _open_goto_line(self) -> None:
+        def on_result(value: str | None) -> None:
+            if value is None:
+                return
+            try:
+                n = int(value.strip())
+                idx = max(0, min(n - 1, len(self._model.lines) - 1))
+                self._jump_to_line(idx)
+            except ValueError:
+                pass
+        self.push_screen(CommandModal(":"), on_result)
+
+    def _open_search(self) -> None:
+        import re as _re
+
+        def on_result(value: str | None) -> None:
+            if value is None:
+                return
+            if not value:
+                self._search_pattern = ""
+                self._match_indices = []
+                self._match_cursor = 0
+                self._line_view().set_matches(set())
+                self._refresh_status()
+                return
+            try:
+                pattern = _re.compile(value, _re.IGNORECASE)
+            except _re.error:
+                return
+            self._search_pattern = value
+            self._match_indices = [
+                idx for idx, line in enumerate(self._model.lines)
+                if pattern.search(line.text)
+            ]
+            self._match_cursor = 0
+            self._line_view().set_matches(set(self._match_indices))
+            self._refresh_status()
+            if self._match_indices:
+                self._jump_to_line(self._match_indices[0])
+
+        self.push_screen(CommandModal("/"), on_result)
+
+    def _next_match(self) -> None:
+        if not self._match_indices:
+            return
+        self._match_cursor = (self._match_cursor + 1) % len(self._match_indices)
+        self._jump_to_line(self._match_indices[self._match_cursor])
+        self._refresh_status()
+
+    def _prev_match(self) -> None:
+        if not self._match_indices:
+            return
+        self._match_cursor = (self._match_cursor - 1) % len(self._match_indices)
+        self._jump_to_line(self._match_indices[self._match_cursor])
+        self._refresh_status()
+
+    def _select_all_matches(self) -> None:
+        if not self._match_indices:
+            return
+        lv = self._line_view()
+        group = self._model.active_group
+        for idx in self._match_indices:
+            self._model.lines[idx].group = group
+            lv._redraw_line(idx)
+        self._refresh_status()
+
+    def on_key(self, event: events.Key) -> None:
+        ch = event.character
+        if ch == "g":
+            self._jump_to_line(0)
+            event.stop()
+        elif ch == "G":
+            self._jump_to_line(len(self._model.lines) - 1)
+            event.stop()
+        elif ch == ":":
+            self._open_goto_line()
+            event.stop()
+        elif ch == "/":
+            self._open_search()
+            event.stop()
+        elif ch == ">":
+            self._next_match()
+            event.stop()
+        elif ch == "<":
+            self._prev_match()
+            event.stop()
+        elif ch == "*":
+            self._select_all_matches()
+            event.stop()
 
     def _set_group(self, group: int) -> None:
         self._model.active_group = group

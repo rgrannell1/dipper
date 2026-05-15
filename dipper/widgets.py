@@ -2,6 +2,7 @@
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.screen import ModalScreen
 from textual.widgets import Input, Label
 
@@ -70,5 +71,50 @@ class AnnotationModal(ModalScreen[str]):
     AnnotationModal > Input {
         width: 60;
         margin: 0 2 1 2;
+    }
+    """
+
+
+class CommandModal(ModalScreen[str | None]):
+    """Bottom command-bar for : (goto line) and / (search) commands."""
+
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    def __init__(self, prefix: str) -> None:
+        super().__init__()
+        self._prefix = prefix
+
+    def compose(self) -> ComposeResult:
+        with Horizontal(id="cmd-bar"):
+            yield Label(self._prefix, id="cmd-prefix")
+            yield Input(id="cmd-input")
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    DEFAULT_CSS = """
+    CommandModal {
+        background: transparent;
+        align: left bottom;
+    }
+    #cmd-bar {
+        height: 1;
+        width: 100%;
+        background: $panel;
+        padding: 0 1;
+    }
+    #cmd-prefix {
+        width: auto;
+        color: $text;
+    }
+    #cmd-input {
+        border: none;
+        height: 1;
+        background: $panel;
+        width: 1fr;
+        padding: 0;
     }
     """

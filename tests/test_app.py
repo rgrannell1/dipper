@@ -192,3 +192,182 @@ class TestGroupsFlag:
     async def test_group_label_uses_prepopulated_name(self):
         async with make_app(group_names={1: "todo"}).run_test() as pilot:
             assert pilot.app._model.group_label(1) == "todo"
+
+
+class TestWorkflow:
+    async def test_single_group_write_contains_mark_with_line_number(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")  # select line 1
+            await pilot.press("w")
+            await pilot.pause()
+        assert "%%dipper:mark:1:1%%" in app._return_value
+
+    async def test_mark_line_number_reflects_position_in_source(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("down")
+            await pilot.press("down")
+            await pilot.press("tab")  # select line 3
+            await pilot.press("w")
+            await pilot.pause()
+        assert "%%dipper:mark:1:3%%" in app._return_value
+
+    async def test_group_summary_contains_line_range(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("w")
+            await pilot.pause()
+        assert "%%dipper:group:1:1%%" in app._return_value
+
+    async def test_two_groups_both_appear_in_summary(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")       # line 1 → group 1
+            await pilot.press("2")
+            await pilot.press("down")
+            await pilot.press("tab")       # line 2 → group 2
+            await pilot.press("w")
+            await pilot.pause()
+        output = app._return_value
+        assert "%%dipper:group:1:" in output
+        assert "%%dipper:group:2:" in output
+        assert output.index("%%dipper:group:1:") < output.index("%%dipper:group:2:")
+
+    async def test_rename_group_name_appears_in_output(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("r")
+            await pilot.pause(delay=0.1)
+            for ch in "bugs":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            await pilot.press("w")
+            await pilot.pause()
+        assert "bugs" in app._return_value
+
+    async def test_annotation_appears_after_group_header(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("n")
+            await pilot.pause(delay=0.1)
+            for ch in "important note":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            await pilot.press("w")
+            await pilot.pause()
+        output = app._return_value
+        header_pos = output.index("%%dipper:group:1:")
+        note_pos = output.index("important note")
+        assert note_pos > header_pos
+
+    async def test_full_workflow_output_matches_spec(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")           # select line 1 into group 1
+            await pilot.press("r")
+            await pilot.pause(delay=0.1)
+            for ch in "findings":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            await pilot.press("n")
+            await pilot.pause(delay=0.1)
+            for ch in "check this":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            await pilot.press("w")
+            await pilot.pause()
+        output = app._return_value
+        assert "%%dipper:mark:1:1%%" in output
+        assert SEPARATOR_LINE in output
+        assert "%%dipper:group:1:1%% findings" in output
+        assert "check this" in output
+
+    async def test_output_lines_mode_omits_summary(self):
+        app = make_app(output_lines=True)
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("w")
+            await pilot.pause()
+        output = app._return_value
+        assert "%%dipper:mark:1:1%%" in output
+        assert SEPARATOR_LINE not in output
+        assert "%%dipper:group:" not in output
+
+    async def test_output_lines_mode_omits_unselected_source_lines(self):
+        app = make_app(output_lines=True)
+        async with app.run_test() as pilot:
+            await pilot.press("down")
+            await pilot.press("tab")   # select line 2 only
+            await pilot.press("w")
+            await pilot.pause()
+        output = app._return_value
+        assert "alpha" not in output   # line 1 not selected
+        assert "beta" in output        # line 2 selected
+
+    async def test_output_summary_mode_omits_source_lines(self):
+        app = make_app(output_summary=True)
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("n")
+            await pilot.pause(delay=0.1)
+            for ch in "my note":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            await pilot.press("w")
+            await pilot.pause()
+        output = app._return_value
+        assert "%%dipper:group:1:" in output
+        assert "my note" in output
+        assert "alpha" not in output
+        assert SEPARATOR_LINE not in output
+
+
+class TestRenderedUI:
+    async def test_status_bar_shows_dot_after_selection(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.pause(delay=0.1)
+            status = pilot.app.query_one("#status", Label)
+            text = status.render_line(0).text
+            assert "●" in text or "◉" in text
+
+    async def test_status_bar_shows_group_name_after_rename(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("r")
+            await pilot.pause(delay=0.1)
+            for ch in "findings":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            status = pilot.app.query_one("#status", Label)
+            text = status.render_line(0).text
+            assert "findings" in text
+
+    async def test_status_bar_shows_annotation_text(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("n")
+            await pilot.pause(delay=0.1)
+            for ch in "todo":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            status = pilot.app.query_one("#status", Label)
+            text = status.render_line(0).text
+            assert "todo" in text
+
+    async def test_status_bar_shows_filename(self):
+        async with make_app().run_test() as pilot:
+            status = pilot.app.query_one("#status", Label)
+            text = status.render_line(0).text
+            assert "<stdin>" in text
