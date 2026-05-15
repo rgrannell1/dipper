@@ -44,14 +44,21 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+BUILTIN_PRESETS: dict[str, str] = {
+    "priorities": "p1,p2,p3,p4,p5",
+    "cr": "bug,critical,minor,praise,question",
+}
+
+
 def _resolve_groups(args: argparse.Namespace, presets: dict[str, str]) -> str | None:
     if args.groups:
         return args.groups
     if args.preset:
-        if args.preset not in presets:
+        merged = {**BUILTIN_PRESETS, **presets}
+        if args.preset not in merged:
             print(f"dipper: unknown preset '{args.preset}'", file=sys.stderr)
             sys.exit(1)
-        return presets[args.preset]
+        return merged[args.preset]
     return None
 
 

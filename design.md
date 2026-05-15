@@ -103,7 +103,18 @@ Example:
 # named group presets
 testing: bug,critical,security
 reading: quote
+priorities: p1,p2,p3,p4,p5
+cr: bug,critical,minor,praise,question
 ```
+
+Dipper ships with the following built-in presets that are available without any config file:
+
+| Preset | Groups |
+|---|---|
+| `priorities` | `p1,p2,p3,p4,p5` |
+| `cr` | `bug,critical,minor,praise,question` |
+
+User-defined presets in the config file take precedence over built-in presets with the same name.
 
 CLI flags always take precedence over values in the config file. When the same flag appears in both, the CLI value wins. Flags that accept a list (e.g. `--groups`) are not merged; the CLI value replaces the config value entirely.
 
