@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Check for single-letter variables and style issues
+exec uv run ruff check clipper/

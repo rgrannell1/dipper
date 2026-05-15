@@ -1,0 +1,237 @@
+# Main Textual application for clipper
+
+import functools
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.message import Message
+from textual.widgets import Footer, Header, Label, ListView, ListItem, Static
+from textual import events
+
+from rich.text import Text
+from rich.style import Style
+
+from clipper.constants import GROUP_COLOURS, WRITE_KEY
+from clipper.highlight import highlighted_lines
+from clipper.model import DocumentModel, LineState
+from clipper.output import render_output
+from clipper.widgets import AnnotationModal, RenameModal
+
+
+class LineListView(ListView):
+    """Annotatable line list backed by Textual ListView."""
+
+    BINDINGS = [
+        Binding("tab", "toggle_line", "Select line", priority=True),
+    ]
+
+
+    def __init__(self, model: DocumentModel, hi_lines: list[str]) -> None:
+        self._model = model
+        self._hi_lines = hi_lines
+        self._gutter_width = len(str(len(hi_lines))) + 1
+        items = [
+            ListItem(Static(self._line_text(idx), markup=False), id=f"l{idx}")
+            for idx in range(len(hi_lines))
+        ]
+        super().__init__(*items)
+
+    def _line_text(self, idx: int) -> Text:
+        line = self._model.lines[idx]
+        hi_text = Text.from_ansi(self._hi_lines[idx])
+
+        if line.group != 0:
+            colour = GROUP_COLOURS[line.group]
+            hi_text.stylize(f"bold {colour}")
+
+        line_num = str(idx + 1).rjust(self._gutter_width)
+        gutter = Text(f"{line_num} ", style="dim")
+
+        if line.group != 0:
+            colour = GROUP_COLOURS[line.group]
+            indicator = Text("● ", style=f"bold {colour}")
+        else:
+            indicator = Text("  ")
+
+        return Text.assemble(gutter, indicator, hi_text)
+
+    def _redraw_line(self, idx: int) -> None:
+        self.query_one(f"#l{idx} Static", Static).update(self._line_text(idx))
+
+    def action_toggle_line(self) -> None:
+        idx = self.index
+        if idx is None:
+            return
+        self._model.toggle_line(idx)
+        self._redraw_line(idx)
+
+    @property
+    def cursor_index(self) -> int:
+        return self.index if self.index is not None else 0
+
+
+
+
+
+class ClipperApp(App):
+    """File annotation TUI."""
+
+    TITLE = "clipper"
+
+    BINDINGS = [
+        Binding("n", "annotate", "Note"),
+        Binding("r", "rename_group", "Rename"),
+        Binding(WRITE_KEY, "write_output", "Write & quit"),
+        Binding("q", "quit_no_output", "Quit"),
+        *[Binding(str(grp), f"set_group_{grp}", show=False, priority=True) for grp in range(1, 10)],
+    ]
+
+    CSS = """
+    LineListView {
+        height: 1fr;
+    }
+    #header-label {
+        height: 1;
+        background: $panel;
+        padding: 0 1;
+        color: $text-muted;
+    }
+    #status {
+        height: 1;
+        background: $panel;
+        padding: 0 1;
+    }
+    """
+
+    def __init__(
+        self,
+        source: str,
+        filename: str | None,
+        prompt: str | None = None,
+        header: str | None = None,
+        group_names: dict[int, str] | None = None,
+    ) -> None:
+        super().__init__()
+        lines = source.splitlines()
+        self._model = DocumentModel(
+            lines=[LineState(text=line) for line in lines],
+            group_names=dict(group_names or {}),
+        )
+        self._hi_lines = highlighted_lines(source, filename)
+        self._filename = filename or "<stdin>"
+        self._header = header
+        if prompt is not None:
+            self.sub_title = prompt
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=False)
+        if self._header is not None:
+            yield Label(self._header, id="header-label")
+        yield LineListView(self._model, self._hi_lines)
+        yield Label(self._status_text(), id="status")
+        yield Footer()
+
+    def _cursor_group(self) -> int:
+        try:
+            idx = self._line_view().cursor_index
+        except Exception:
+            return 0
+        return self._model.lines[idx].group if idx < len(self._model.lines) else 0
+
+    def _status_text(self) -> Text:
+        active = self._model.active_group
+        used = sorted(self._model.selected_groups())
+        result = Text(no_wrap=True, overflow="ellipsis")
+
+        for grp in used:
+            colour = GROUP_COLOURS[grp]
+            dot = "◉" if grp == active else "●"
+            result.append(dot, style=Style(color=colour, bold=True))
+            result.append(" ")
+
+        try:
+            cursor = self._line_view().cursor_index
+        except Exception:
+            cursor = 0
+
+        nearest = self._model.nearest_group(cursor)
+        if nearest is not None:
+            colour = GROUP_COLOURS[nearest]
+            label = self._model.group_label(nearest)
+            result.append("  |  ", style="dim")
+            result.append(label, style=Style(color=colour, bold=True))
+            annotation = self._model.annotations.get(nearest)
+            if annotation and annotation.text:
+                result.append("  ", style="dim")
+                result.append(annotation.text, style="dim")
+                result.append("  |  edit", style="dim")
+
+        result.append(f"  |  {self._filename}", style="dim")
+        return result
+
+    def _refresh_status(self) -> None:
+        self.query_one("#status", Label).update(self._status_text())
+
+    def _line_view(self) -> LineListView:
+        return self.query_one(LineListView)
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        self._refresh_status()
+
+    def _on_rename_dismiss(self, group: int, result: str) -> None:
+        if result:
+            self._model.group_names[group] = result
+        else:
+            self._model.group_names.pop(group, None)
+        self._refresh_status()
+
+    def action_rename_group(self) -> None:
+        grp = self._cursor_group() or self._model.active_group
+        existing = self._model.group_names.get(grp, "")
+        callback = functools.partial(self._on_rename_dismiss, grp)
+        self.push_screen(RenameModal(grp, existing), callback)
+
+    def _on_annotate_dismiss(self, group: int, result: str) -> None:
+        if result:
+            self._model.set_annotation(group, result)
+        else:
+            self._model.annotations.pop(group, None)
+        self._refresh_status()
+
+    def action_annotate(self) -> None:
+        used = self._model.selected_groups()
+        if not used:
+            return
+        group = self._model.active_group if self._model.active_group in used else min(used)
+        existing = self._model.annotations[group].text if group in self._model.annotations else ""
+        callback = functools.partial(self._on_annotate_dismiss, group)
+        self.push_screen(AnnotationModal(group, existing), callback)
+
+    def action_write_output(self) -> None:
+        self.exit(render_output(self._model))
+
+    def action_quit_no_output(self) -> None:
+        self.exit(None)
+
+    def on_line_list_view_group_selected(self, event: LineListView.GroupSelected) -> None:
+        self._refresh_status()
+
+    def _set_group(self, group: int) -> None:
+        self._model.active_group = group
+        self._refresh_status()
+
+
+for _grp in range(1, 10):
+    setattr(ClipperApp, f"action_set_group_{_grp}", functools.partialmethod(ClipperApp._set_group, _grp))
+
+
+def run(
+    source: str,
+    filename: str | None,
+    prompt: str | None = None,
+    header: str | None = None,
+    group_names: dict[int, str] | None = None,
+) -> None:
+    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names)
+    result = app.run()
+    if result:
+        print(result)

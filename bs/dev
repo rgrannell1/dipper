@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Run clipper on an example file for development
+exec uv run clipper "${1:-clipper/app.py}"
