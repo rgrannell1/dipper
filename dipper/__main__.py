@@ -14,18 +14,22 @@ def _config_path() -> Path:
     return base / "dipper" / "config"
 
 
-def _load_config_args(parser: argparse.ArgumentParser) -> list[str]:
-    path = _config_path()
+def _parse_config(path: Path) -> tuple[list[str], dict[str, str]]:
+    """Return (flag_tokens, presets) from the config file."""
     if not path.exists():
-        return []
-    lines = path.read_text().splitlines()
-    tokens: list[str] = []
-    for line in lines:
+        return [], {}
+    flag_tokens: list[str] = []
+    presets: dict[str, str] = {}
+    for line in path.read_text().splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        tokens.extend(shlex.split(stripped))
-    return tokens
+        if ":" in stripped and not stripped.startswith("--"):
+            name, _, csv = stripped.partition(":")
+            presets[name.strip()] = csv.strip()
+        else:
+            flag_tokens.extend(shlex.split(stripped))
+    return flag_tokens, presets
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -33,20 +37,32 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("file", nargs="?", help="File to annotate (omit to read stdin)")
     parser.add_argument("--prompt", metavar="STR", default=None, help="Subtitle shown in the header bar")
     parser.add_argument("--header", metavar="STR", default=None, help="Label shown above the line list")
-    parser.add_argument("--groups", metavar="CSV", default=None, help="Comma-separated group names (group 1, 2, …)")
-    parser.add_argument("--header-group", metavar="NAME", default=None, dest="header_group", help="Group name to use as section headers")
+    parser.add_argument("--groups", metavar="CSV", default=None, help="Comma-separated group names")
+    parser.add_argument("--preset", metavar="NAME", default=None, help="Named group preset from config file")
+    parser.add_argument("--lines", action="store_true", default=False, help="Output selected lines with marks only")
+    parser.add_argument("--summary", action="store_true", default=False, help="Output group summary block only")
     return parser
+
+
+def _resolve_groups(args: argparse.Namespace, presets: dict[str, str]) -> str | None:
+    if args.groups:
+        return args.groups
+    if args.preset:
+        if args.preset not in presets:
+            print(f"dipper: unknown preset '{args.preset}'", file=sys.stderr)
+            sys.exit(1)
+        return presets[args.preset]
+    return None
 
 
 def main() -> None:
     parser = _build_parser()
 
-    config_args = _load_config_args(parser)
-    config_ns = parser.parse_args(config_args + ["--"]) if config_args else argparse.Namespace()
+    config_flag_tokens, presets = _parse_config(_config_path())
+    config_ns = parser.parse_args(config_flag_tokens + ["--"]) if config_flag_tokens else argparse.Namespace()
 
     cli_ns = parser.parse_args()
 
-    # CLI wins over config; merge by only applying config values for unset CLI args
     for key, value in vars(config_ns).items():
         if key == "file":
             continue
@@ -65,21 +81,17 @@ def main() -> None:
         source = sys.stdin.read()
         filename = None
 
+    groups_csv = _resolve_groups(args, presets)
+
     group_names = {}
-    if args.groups:
-        for idx, name in enumerate(args.groups.split(","), start=1):
+    if groups_csv:
+        for idx, name in enumerate(groups_csv.split(","), start=1):
             name = name.strip()
             if name:
                 group_names[idx] = name
 
-    run(
-        source,
-        filename,
-        prompt=args.prompt,
-        header=args.header,
-        group_names=group_names,
-        header_group=args.header_group,
-    )
+    run(source, filename, prompt=args.prompt, header=args.header, group_names=group_names,
+        output_lines=args.lines, output_summary=args.summary)
 
 
 if __name__ == "__main__":

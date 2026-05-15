@@ -205,6 +205,88 @@ class TestEncodeRanges:
         assert _encode_ranges([]) == ""
 
 
+class TestLinesFlag:
+    def test_only_selected_lines_emitted(self):
+        m = make_model("first", "middle", "last")
+        select(m, 1)
+        out = render_output(m, lines=True)
+        assert "middle" in out
+        assert "first" not in out
+        assert "last" not in out
+
+    def test_mark_follows_each_selected_line(self):
+        m = make_model("a", "b")
+        select(m, 0)
+        lines = render_output(m, lines=True).splitlines()
+        assert lines[0] == "a"
+        assert lines[1].startswith("%%dipper:mark:1:1%%")
+
+    def test_no_separator_in_lines_mode(self):
+        m = make_model("a", "b")
+        select(m, 0)
+        assert SEPARATOR_LINE not in render_output(m, lines=True)
+
+    def test_no_group_header_in_lines_mode(self):
+        m = make_model("a")
+        select(m, 0)
+        assert "%%dipper:group:" not in render_output(m, lines=True)
+
+    def test_empty_when_nothing_selected(self):
+        m = make_model("a", "b")
+        assert render_output(m, lines=True) == ""
+
+
+class TestSummaryFlag:
+    def test_only_group_headers_and_annotations(self):
+        m = make_model("a", "b")
+        select(m, 0)
+        m.set_annotation(1, "found it")
+        out = render_output(m, summary=True)
+        assert "%%dipper:group:1:" in out
+        assert "found it" in out
+
+    def test_no_source_lines_in_summary_mode(self):
+        m = make_model("alpha", "beta")
+        select(m, 0)
+        out = render_output(m, summary=True)
+        assert "alpha" not in out
+        assert "beta" not in out
+
+    def test_no_separator_in_summary_mode(self):
+        m = make_model("a")
+        select(m, 0)
+        assert SEPARATOR_LINE not in render_output(m, summary=True)
+
+    def test_empty_when_nothing_selected(self):
+        m = make_model("a")
+        assert render_output(m, summary=True) == ""
+
+
+class TestLinesPlusSummary:
+    def test_selected_lines_and_summary_both_present(self):
+        m = make_model("a", "b", "c")
+        select(m, 1)
+        m.set_annotation(1, "note")
+        out = render_output(m, lines=True, summary=True)
+        assert "b" in out
+        assert "%%dipper:mark:1:2%%" in out
+        assert "%%dipper:group:1:" in out
+        assert "note" in out
+
+    def test_unselected_lines_absent(self):
+        m = make_model("first", "middle", "last")
+        select(m, 1)
+        out = render_output(m, lines=True, summary=True)
+        assert "first" not in out
+        assert "last" not in out
+
+    def test_no_separator_between_sections(self):
+        m = make_model("a")
+        select(m, 0)
+        out = render_output(m, lines=True, summary=True)
+        assert SEPARATOR_LINE not in out
+
+
 class TestMarkerPattern:
     def test_all_dipper_lines_match_pattern(self):
         pattern = re.compile(r"^%%dipper:[^%]+%%")

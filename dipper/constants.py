@@ -24,9 +24,6 @@ SEPARATOR_LINE = "%%dipper:separator%%"
 # Group header line in the summary section; RANGES is comma-separated run-length encoded line numbers
 GROUP_FORMAT = "%%dipper:group:{group}:{ranges}%%"
 
-# Header marker for lines assigned to the header group (section dividers)
-HEADER_FORMAT = "%%dipper:header:{group}:{line}%% {underline}"
-
 # Colours for groups 1–9, indexed by group number (1-based, index 0 unused)
 GROUP_COLOURS = [
     "",          # placeholder, groups are 1-based

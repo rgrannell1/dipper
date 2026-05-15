@@ -146,18 +146,20 @@ class ClipperApp(App):
         prompt: str | None = None,
         header: str | None = None,
         group_names: dict[int, str] | None = None,
-        header_group: str | None = None,
+        output_lines: bool = False,
+        output_summary: bool = False,
     ) -> None:
         super().__init__()
         lines = source.splitlines()
         self._model = DocumentModel(
             lines=[LineState(text=line) for line in lines],
             group_names=dict(group_names or {}),
-            header_group_name=header_group,
         )
         self._hi_lines = highlighted_lines(source, filename)
         self._filename = filename or "<stdin>"
         self._header = header
+        self._output_lines = output_lines
+        self._output_summary = output_summary
         if prompt is not None:
             self.sub_title = prompt
 
@@ -237,8 +239,7 @@ class ClipperApp(App):
         self._refresh_status()
 
     def action_annotate(self) -> None:
-        hg = self._model.header_group()
-        used = {g for g in self._model.selected_groups() if g != hg}
+        used = self._model.selected_groups()
         if not used:
             return
         group = self._model.active_group if self._model.active_group in used else min(used)
@@ -247,7 +248,7 @@ class ClipperApp(App):
         self.push_screen(AnnotationModal(group, existing), callback)
 
     def action_write_output(self) -> None:
-        self.exit(render_output(self._model))
+        self.exit(render_output(self._model, lines=self._output_lines, summary=self._output_summary))
 
     def action_quit_no_output(self) -> None:
         self.exit(None)
@@ -276,9 +277,10 @@ def run(
     prompt: str | None = None,
     header: str | None = None,
     group_names: dict[int, str] | None = None,
-    header_group: str | None = None,
+    output_lines: bool = False,
+    output_summary: bool = False,
 ) -> None:
-    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names, header_group=header_group)
+    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names, output_lines=output_lines, output_summary=output_summary)
     result = app.run()
     if result:
         print(result)

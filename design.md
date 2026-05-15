@@ -88,13 +88,21 @@ Clipper reads defaults from `$XDG_CONFIG_HOME/clipper/config` (falling back to `
 
 ### Format
 
-One flag per line, using the same syntax as the CLI. Blank lines and lines beginning with `#` are ignored. Example:
+The config file has two kinds of lines:
+
+**Flag lines** — one CLI flag per line, same syntax as the CLI. Blank lines and lines beginning with `#` are ignored.
+
+**Preset lines** — named group lists in the form `name: group1,group2,...`. Presets are referenced by `--preset NAME` on the CLI and expand to the equivalent `--groups` value.
+
+Example:
 
 ```
-# default group names for code review workflow
---groups findings,context,questions
---header-group findings
+# default prompt for code review workflow
 --prompt code review
+
+# named group presets
+testing: bug,critical,security
+reading: quote
 ```
 
 CLI flags always take precedence over values in the config file. When the same flag appears in both, the CLI value wins. Flags that accept a list (e.g. `--groups`) are not merged; the CLI value replaces the config value entirely.
@@ -107,29 +115,70 @@ CLI flags always take precedence over values in the config file. When the same f
 
 ---
 
-## `--header-group <name>`
+## `--preset <name>`
 
-`--header-group` designates one named group as the *header group*. Lines assigned to the header group are rendered as section dividers in the output rather than as annotated source lines. The header group does not appear in the summary section.
+`--preset` selects a named group list from the config file, expanding it as if `--groups` had been passed with that CSV. It exists so that a frequently-used group set does not need to be retyped on every invocation.
 
 ### Motivation
 
-When annotating a long file for a structured review, the reviewer may want to label sections (e.g. "Auth flow", "Error handling") without those label lines being treated as findings. The header group provides this without requiring a separate pass or a second tool.
+A reviewer running the same workflow repeatedly (e.g. `testing: bug,critical,security`) should not have to pass `--groups bug,critical,security` every time. Defining the preset once in the config file and referencing it by name keeps invocations short and consistent.
 
-### Output behaviour
+### Behaviour
 
-A line in the header group produces a `%%clipper:header:N:L%%` marker instead of a `%%clipper:mark:N:L%%` marker. Downstream tools can use this to render the line as a heading rather than an annotated finding.
-
-```
-def authenticate(user, password):
-%%clipper:header:1:1%% ── Auth flow ────────────────────────
-    token = generate_token(user)
-%%clipper:mark:2:3%% ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-```
-
-The header group is excluded from the summary block. Its lines do not receive an annotation prompt in the TUI.
+`--preset NAME` looks up `NAME` in the preset lines of the config file and uses its CSV as the value of `--groups`. If `--groups` is also passed explicitly on the CLI, the CLI value wins and `--preset` is ignored. If `NAME` does not exist in the config file, dipper exits with an error.
 
 ### Constraints
 
-- The value passed to `--header-group` is a group name, not a number. It must match a name set via `--groups` or assigned interactively. If no group with that name exists at write time, the flag has no effect.
-- Only one group may be designated as the header group.
-- Header lines still appear inline in the body in their original position; they are not moved or hoisted.
+- Preset names are case-sensitive.
+- A preset line in the config must follow the form `name: group1,group2,...` — no leading `--`.
+- `--preset` and `--groups` are mutually exclusive when both are passed on the CLI; `--groups` takes precedence.
+
+---
+
+## Output mode flags: `--summary` and `--lines`
+
+By default dipper writes the full annotated file — all source lines, inline marks, separator, and summary block. Two flags narrow the output to relevant context only, for use in pipelines and LLM prompts where the full file is noise.
+
+### `--summary`
+
+Writes only the summary block: one entry per group, containing the group header (with line ranges) and its annotation text. The source body and separator are omitted.
+
+```
+%%dipper:group:1:3-5,10%%
+This block handles auth token refresh.
+
+%%dipper:group:2:22%%
+Possible null dereference here.
+```
+
+Use when the consumer needs the annotations and locations but not the source lines themselves — e.g. generating a structured report or feeding findings into another tool.
+
+### `--lines`
+
+Writes only the selected source lines, each immediately followed by its mark line. Unselected lines are omitted. The separator and summary block are omitted.
+
+```
+token = generate_token(user)
+%%dipper:mark:1:3%% ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+result = cache.get(key)
+%%dipper:mark:2:22%% ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+Use when the consumer needs the exact source text of the findings with their group and position, but not the surrounding context or annotations — e.g. feeding selected lines into a code review prompt.
+
+### Combining the flags
+
+The flags are additive. Each one independently includes its section in the output; passing both gives selected lines with marks followed by the summary block, still omitting unselected source lines and the full-file body.
+
+| Flags | Output |
+|---|---|
+| neither | full annotated file (default) |
+| `--lines` | selected lines + marks only |
+| `--summary` | summary block only |
+| `--lines --summary` | selected lines + marks, then summary block |
+
+### Constraints
+
+- Neither flag affects the TUI — output mode is applied at write time when `w` is pressed.
+- Both flags still respect `--groups`, `--header-group`, and all other selection flags.
+- If no lines are selected, both flags produce empty output.

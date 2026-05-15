@@ -2,7 +2,6 @@
 
 from dipper.constants import (
     GROUP_FORMAT,
-    HEADER_FORMAT,
     MARK_FORMAT,
     SEPARATOR_LINE,
     UNDERLINE_CHAR,
@@ -32,44 +31,67 @@ def _mark_line(text: str, group: int, line_number: int) -> str:
     return MARK_FORMAT.format(group=group, line=line_number, underline=underline)
 
 
-def _header_line(text: str, group: int, line_number: int) -> str:
-    underline = UNDERLINE_CHAR * max(len(text), UNDERLINE_MIN)
-    return HEADER_FORMAT.format(group=group, line=line_number, underline=underline)
-
-
 def _group_header(group: int, name: str | None, ranges: str) -> str:
     header = GROUP_FORMAT.format(group=group, ranges=ranges)
     return f"{header} {name}" if name else header
 
 
-def render_output(model: DocumentModel) -> str:
+def _collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
+    """Return (body_lines, group_line_numbers) from the model."""
     body_lines: list[str] = []
     group_line_numbers: dict[int, list[int]] = {}
-    hg = model.header_group()
-
     for idx, line in enumerate(model.lines):
         body_lines.append(line.text)
         if line.group != 0:
             line_number = idx + 1
-            if line.group == hg:
-                body_lines.append(_header_line(line.text, line.group, line_number))
-            else:
-                body_lines.append(_mark_line(line.text, line.group, line_number))
-                group_line_numbers.setdefault(line.group, []).append(line_number)
+            body_lines.append(_mark_line(line.text, line.group, line_number))
+            group_line_numbers.setdefault(line.group, []).append(line_number)
+    return body_lines, group_line_numbers
 
-    used_groups = sorted(g for g in model.selected_groups() if g != hg)
 
-    if not used_groups:
-        return "\n".join(body_lines)
-
-    summary_lines: list[str] = ["", SEPARATOR_LINE, ""]
+def _build_summary(model: DocumentModel, group_line_numbers: dict[int, list[int]]) -> list[str]:
+    used_groups = sorted(model.selected_groups())
+    summary: list[str] = []
     for group in used_groups:
         annotation = model.annotations.get(group)
         annotation_text = annotation.text if annotation else ""
         name = model.group_names.get(group)
         ranges = _encode_ranges(group_line_numbers.get(group, []))
-        summary_lines.append(_group_header(group, name, ranges))
-        summary_lines.append(annotation_text)
-        summary_lines.append("")
+        summary.append(_group_header(group, name, ranges))
+        summary.append(annotation_text)
+        summary.append("")
+    return summary
 
-    return "\n".join(body_lines + summary_lines)
+
+def render_output(
+    model: DocumentModel,
+    lines: bool = False,
+    summary: bool = False,
+) -> str:
+    body_lines, group_line_numbers = _collect(model)
+    used_groups = sorted(model.selected_groups())
+
+    if not lines and not summary:
+        if not used_groups:
+            return "\n".join(body_lines)
+        summary_block = ["", SEPARATOR_LINE, ""] + _build_summary(model, group_line_numbers)
+        return "\n".join(body_lines + summary_block)
+
+    parts: list[str] = []
+
+    if lines:
+        lines_out: list[str] = []
+        for idx, line in enumerate(model.lines):
+            if line.group != 0:
+                line_number = idx + 1
+                lines_out.append(line.text)
+                lines_out.append(_mark_line(line.text, line.group, line_number))
+        if lines_out:
+            parts.append("\n".join(lines_out))
+
+    if summary:
+        summary_block = _build_summary(model, group_line_numbers)
+        if summary_block:
+            parts.append("\n".join(summary_block))
+
+    return "\n\n".join(parts)
