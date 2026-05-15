@@ -11,11 +11,11 @@ from textual import events
 from rich.text import Text
 from rich.style import Style
 
-from clipper.constants import GROUP_COLOURS, WRITE_KEY
-from clipper.highlight import highlighted_lines
-from clipper.model import DocumentModel, LineState
-from clipper.output import render_output
-from clipper.widgets import AnnotationModal, RenameModal
+from dipper.constants import GROUP_COLOURS, WRITE_KEY
+from dipper.highlight import highlighted_lines
+from dipper.model import DocumentModel, LineState
+from dipper.output import render_output
+from dipper.widgets import AnnotationModal, RenameModal
 
 
 class GroupProvider(Provider):
@@ -111,7 +111,7 @@ class LineListView(ListView):
 class ClipperApp(App):
     """File annotation TUI."""
 
-    TITLE = "clipper"
+    TITLE = "dipper"
     COMMANDS = {GroupProvider}
 
     BINDINGS = [
@@ -146,12 +146,14 @@ class ClipperApp(App):
         prompt: str | None = None,
         header: str | None = None,
         group_names: dict[int, str] | None = None,
+        header_group: str | None = None,
     ) -> None:
         super().__init__()
         lines = source.splitlines()
         self._model = DocumentModel(
             lines=[LineState(text=line) for line in lines],
             group_names=dict(group_names or {}),
+            header_group_name=header_group,
         )
         self._hi_lines = highlighted_lines(source, filename)
         self._filename = filename or "<stdin>"
@@ -235,7 +237,8 @@ class ClipperApp(App):
         self._refresh_status()
 
     def action_annotate(self) -> None:
-        used = self._model.selected_groups()
+        hg = self._model.header_group()
+        used = {g for g in self._model.selected_groups() if g != hg}
         if not used:
             return
         group = self._model.active_group if self._model.active_group in used else min(used)
@@ -273,8 +276,9 @@ def run(
     prompt: str | None = None,
     header: str | None = None,
     group_names: dict[int, str] | None = None,
+    header_group: str | None = None,
 ) -> None:
-    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names)
+    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names, header_group=header_group)
     result = app.run()
     if result:
         print(result)

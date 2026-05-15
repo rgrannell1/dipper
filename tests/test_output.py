@@ -1,8 +1,8 @@
 import re
 import pytest
-from clipper.constants import CLIPPER_PREFIX, SEPARATOR_LINE, UNDERLINE_MIN
-from clipper.model import DocumentModel, LineState
-from clipper.output import render_output
+from dipper.constants import DIPPER_PREFIX, SEPARATOR_LINE, UNDERLINE_MIN
+from dipper.model import DocumentModel, LineState
+from dipper.output import render_output, _encode_ranges
 
 
 def make_model(*texts: str) -> DocumentModel:
@@ -22,7 +22,7 @@ class TestNoSelections:
     def test_no_separator_or_markers(self):
         m = make_model("foo", "bar")
         out = render_output(m)
-        assert CLIPPER_PREFIX not in out
+        assert DIPPER_PREFIX not in out
 
 
 class TestMarkLine:
@@ -31,13 +31,26 @@ class TestMarkLine:
         select(m, 0)
         lines = render_output(m).splitlines()
         assert lines[0] == "hello"
-        assert lines[1].startswith("%%clipper:mark:1%%")
+        assert lines[1].startswith("%%dipper:mark:1:")
 
     def test_mark_line_contains_group_number(self):
         m = make_model("x")
         select(m, 0, group=3)
         out = render_output(m)
-        assert "%%clipper:mark:3%%" in out
+        assert "%%dipper:mark:3:" in out
+
+    def test_mark_line_contains_1based_line_number(self):
+        m = make_model("a", "b", "c")
+        select(m, 2)  # third line → line number 3
+        lines = render_output(m).splitlines()
+        c_idx = lines.index("c")
+        assert lines[c_idx + 1].startswith("%%dipper:mark:1:3%%")
+
+    def test_mark_line_first_line_number_is_1(self):
+        m = make_model("first")
+        select(m, 0)
+        mark = render_output(m).splitlines()[1]
+        assert mark.startswith("%%dipper:mark:1:1%%")
 
     def test_underline_minimum_length(self):
         m = make_model("hi")  # len 2 < UNDERLINE_MIN
@@ -58,9 +71,8 @@ class TestMarkLine:
         m = make_model("a", "b")
         select(m, 0)
         lines = render_output(m).splitlines()
-        # line index 2 is "b"; it should not be followed by a mark
         b_idx = lines.index("b")
-        assert b_idx == len(lines) - 1 or not lines[b_idx + 1].startswith("%%clipper:mark")
+        assert b_idx == len(lines) - 1 or not lines[b_idx + 1].startswith("%%dipper:mark")
 
 
 class TestSeparator:
@@ -93,32 +105,47 @@ class TestAnnotations:
         select(m, 0)
         m.set_annotation(1, "my note")
         lines = render_output(m).splitlines()
-        header_idx = next(i for i, l in enumerate(lines) if "%%clipper:group:1%%" in l)
+        header_idx = next(i for i, l in enumerate(lines) if "%%dipper:group:1:" in l)
         assert lines[header_idx + 1] == "my note"
 
     def test_empty_annotation_produces_empty_line(self):
         m = make_model("code")
         select(m, 0)
         lines = render_output(m).splitlines()
-        header_idx = next(i for i, l in enumerate(lines) if "%%clipper:group:1%%" in l)
+        header_idx = next(i for i, l in enumerate(lines) if "%%dipper:group:1:" in l)
         assert lines[header_idx + 1] == ""
 
 
-class TestGroupNames:
+class TestGroupHeader:
+    def test_group_header_contains_line_range(self):
+        m = make_model("a", "b", "c")
+        select(m, 0)
+        select(m, 2)
+        out = render_output(m)
+        # lines 1 and 3 selected — should appear as "1,3" in group header
+        assert "%%dipper:group:1:1,3%%" in out
+
+    def test_contiguous_lines_encoded_as_range(self):
+        m = make_model("a", "b", "c")
+        select(m, 0)
+        select(m, 1)
+        select(m, 2)
+        out = render_output(m)
+        assert "%%dipper:group:1:1-3%%" in out
+
     def test_named_group_in_header(self):
         m = make_model("code")
         select(m, 0)
         m.group_names[1] = "bugs"
         out = render_output(m)
-        assert "%%clipper:group:1%% bugs" in out
+        assert "%%dipper:group:1:1%% bugs" in out
 
-    def test_unnamed_group_header_has_no_trailing_name(self):
+    def test_unnamed_group_header_ends_at_closing_delimiter(self):
         m = make_model("code")
         select(m, 0)
         out = render_output(m)
-        assert "%%clipper:group:1%%" in out
-        line = next(l for l in out.splitlines() if "%%clipper:group:1%%" in l)
-        assert line.strip() == "%%clipper:group:1%%"
+        line = next(l for l in out.splitlines() if "%%dipper:group:1:" in l)
+        assert line.strip() == "%%dipper:group:1:1%%"
 
 
 class TestMultipleGroups:
@@ -127,16 +154,16 @@ class TestMultipleGroups:
         select(m, 0, group=1)
         select(m, 1, group=2)
         out = render_output(m)
-        assert "%%clipper:group:1%%" in out
-        assert "%%clipper:group:2%%" in out
+        assert "%%dipper:group:1:" in out
+        assert "%%dipper:group:2:" in out
 
     def test_groups_in_sorted_order(self):
         m = make_model("a", "b", "c")
         select(m, 2, group=3)
         select(m, 0, group=1)
         out = render_output(m)
-        g1 = out.index("%%clipper:group:1%%")
-        g3 = out.index("%%clipper:group:3%%")
+        g1 = out.index("%%dipper:group:1:")
+        g3 = out.index("%%dipper:group:3:")
         assert g1 < g3
 
     def test_each_group_annotation_present(self):
@@ -149,10 +176,38 @@ class TestMultipleGroups:
         assert "note one" in out
         assert "note two" in out
 
+    def test_each_group_has_correct_line_numbers(self):
+        m = make_model("a", "b", "c")
+        select(m, 0, group=1)
+        select(m, 2, group=2)
+        out = render_output(m)
+        assert "%%dipper:group:1:1%%" in out
+        assert "%%dipper:group:2:3%%" in out
+
+
+class TestEncodeRanges:
+    def test_single_line(self):
+        assert _encode_ranges([5]) == "5"
+
+    def test_contiguous_run(self):
+        assert _encode_ranges([3, 4, 5]) == "3-5"
+
+    def test_isolated_lines(self):
+        assert _encode_ranges([1, 3, 5, 7]) == "1,3,5,7"
+
+    def test_mixed_ranges(self):
+        assert _encode_ranges([3, 4, 5, 10, 11, 20]) == "3-5,10-11,20"
+
+    def test_unsorted_input_sorted_in_output(self):
+        assert _encode_ranges([10, 1, 5]) == "1,5,10"
+
+    def test_empty_list(self):
+        assert _encode_ranges([]) == ""
+
 
 class TestMarkerPattern:
-    def test_all_clipper_lines_match_pattern(self):
-        pattern = re.compile(r"^%%clipper:[^%]+%%")
+    def test_all_dipper_lines_match_pattern(self):
+        pattern = re.compile(r"^%%dipper:[^%]+%%")
         m = make_model("alpha", "beta")
         select(m, 0, group=1)
         select(m, 1, group=2)

@@ -5,7 +5,7 @@ from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Input, Label
 
-from clipper.constants import GROUP_COLOURS
+from dipper.constants import GROUP_COLOURS
 
 
 class RenameModal(ModalScreen[str]):

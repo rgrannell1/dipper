@@ -1,4 +1,4 @@
-# Constants for the clipper annotation tool
+# Constants for the dipper annotation tool
 
 # Number of colour groups available to the user (1–9)
 GROUP_COUNT = 9
@@ -6,11 +6,11 @@ GROUP_COUNT = 9
 # Key that writes annotated output to stdout and exits
 WRITE_KEY = "w"
 
-# Prefix shared by all clipper-generated output lines
-CLIPPER_PREFIX = "%%clipper:"
+# Prefix shared by all dipper-generated output lines
+DIPPER_PREFIX = "%%dipper:"
 
-# Mark line emitted after each selected source line; N is the group number
-MARK_FORMAT = "%%clipper:mark:{group}%% {underline}"
+# Mark line emitted after each selected source line; N=group, L=1-based line number
+MARK_FORMAT = "%%dipper:mark:{group}:{line}%% {underline}"
 
 # Visual underline character repeated after the mark prefix
 UNDERLINE_CHAR = "^"
@@ -19,10 +19,13 @@ UNDERLINE_CHAR = "^"
 UNDERLINE_MIN = 6
 
 # Separator between annotated body and group summary
-SEPARATOR_LINE = "%%clipper:separator%%"
+SEPARATOR_LINE = "%%dipper:separator%%"
 
-# Group header line in the summary section
-GROUP_FORMAT = "%%clipper:group:{group}%%"
+# Group header line in the summary section; RANGES is comma-separated run-length encoded line numbers
+GROUP_FORMAT = "%%dipper:group:{group}:{ranges}%%"
+
+# Header marker for lines assigned to the header group (section dividers)
+HEADER_FORMAT = "%%dipper:header:{group}:{line}%% {underline}"
 
 # Colours for groups 1–9, indexed by group number (1-based, index 0 unused)
 GROUP_COLOURS = [

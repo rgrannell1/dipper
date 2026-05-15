@@ -53,7 +53,22 @@ Annotation text for group 2
 |------|---------|
 | `%%clipper:mark:N:L%%` | Follows a selected line; `N` is the group number, `L` is the 1-based line number of the selected source line. The `^` characters after the prefix are a visual underline and are not parsed. |
 | `%%clipper:separator%%` | Divides the annotated body from the summary section. |
-| `%%clipper:group:N%%` | Group label in the summary; the next non-empty line is the annotation text. |
+| `%%clipper:group:N:RANGES%%` | Group label in the summary; `N` is the group number, `RANGES` is a comma-separated list of 1-based line ranges covering every selected line in the group. The next non-empty line after the header is the annotation text. |
+
+### Line range encoding
+
+All line numbers selected into a group are collected, sorted, and compressed into a minimal set of contiguous ranges before being written into the `%%clipper:group%%` line. A run of consecutive line numbers is expressed as `START-END`; a single isolated line is expressed as `L`. Multiple ranges are joined with `,` and no spaces.
+
+Examples:
+
+| Selected lines | Encoded ranges |
+|---|---|
+| 5 | `5` |
+| 3, 4, 5 | `3-5` |
+| 3, 4, 5, 10, 11, 20 | `3-5,10-11,20` |
+| 1, 3, 5, 7 | `1,3,5,7` |
+
+This gives a downstream consumer the complete set of relevant locations without requiring it to scan the body for `%%clipper:mark%%` lines.
 
 ### Machine-readable pattern
 

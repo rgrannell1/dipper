@@ -1,5 +1,5 @@
 import pytest
-from clipper.model import DocumentModel, GroupAnnotation, LineState
+from dipper.model import DocumentModel, GroupAnnotation, LineState
 
 
 def make_model(*texts: str, active_group: int = 1) -> DocumentModel:

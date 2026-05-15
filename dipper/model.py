@@ -21,6 +21,16 @@ class DocumentModel:
     annotations: dict[int, GroupAnnotation] = field(default_factory=dict)
     group_names: dict[int, str] = field(default_factory=dict)
     active_group: int = 1
+    header_group_name: str | None = None
+
+    def header_group(self) -> int | None:
+        """Resolve header_group_name to a group number, or None if not found."""
+        if self.header_group_name is None:
+            return None
+        for num, name in self.group_names.items():
+            if name == self.header_group_name:
+                return num
+        return None
 
     def group_label(self, group: int) -> str:
         return self.group_names.get(group, f"group {group}")

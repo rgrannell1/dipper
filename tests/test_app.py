@@ -1,8 +1,8 @@
 import pytest
 from textual.widgets import Input, Label
 
-from clipper.app import ClipperApp, LineListView
-from clipper.constants import CLIPPER_PREFIX, SEPARATOR_LINE
+from dipper.app import ClipperApp, LineListView
+from dipper.constants import DIPPER_PREFIX, SEPARATOR_LINE
 
 
 SOURCE = "alpha\nbeta\ngamma"
@@ -76,7 +76,7 @@ class TestWriteAndQuit:
             await pilot.press("tab")
             await pilot.press("w")
             await pilot.pause()
-        assert CLIPPER_PREFIX in app._return_value
+        assert DIPPER_PREFIX in app._return_value
 
     async def test_w_output_contains_separator(self):
         app = make_app()
