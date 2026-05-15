@@ -131,6 +131,10 @@ class ClipperApp(App):
         Binding("r", "rename_group", "Rename"),
         Binding(WRITE_KEY, "write_output", "Write & quit"),
         Binding("q", "quit_no_output", "Quit"),
+        Binding("colon", "goto_line", "Go to line"),
+        Binding("slash", "search", "Search"),
+        Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
+        Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
         *[Binding(str(grp), f"set_group_{grp}", show=False, priority=True) for grp in range(1, 10)],
     ]
 
@@ -356,6 +360,18 @@ class ClipperApp(App):
             lv._redraw_line(idx)
         self._refresh_status()
 
+    def action_goto_line(self) -> None:
+        self._open_goto_line()
+
+    def action_search(self) -> None:
+        self._open_search()
+
+    def action_next_match(self) -> None:
+        self._next_match()
+
+    def action_prev_match(self) -> None:
+        self._prev_match()
+
     def on_key(self, event: events.Key) -> None:
         ch = event.character
         if ch == "g":
@@ -363,18 +379,6 @@ class ClipperApp(App):
             event.stop()
         elif ch == "G":
             self._jump_to_line(len(self._model.lines) - 1)
-            event.stop()
-        elif ch == ":":
-            self._open_goto_line()
-            event.stop()
-        elif ch == "/":
-            self._open_search()
-            event.stop()
-        elif ch == ">":
-            self._next_match()
-            event.stop()
-        elif ch == "<":
-            self._prev_match()
             event.stop()
         elif ch == "*":
             self._select_all_matches()

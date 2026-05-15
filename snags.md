@@ -22,3 +22,13 @@
 - [x] #20 `fixed` — Pressing 1–9 to change the active group does nothing; ListView consumed digit keys before the handler could fire.
 - [x] #21 `fixed` — Command palette shows no results on an empty query; groups only appear after typing.
 - [x] #22 `fixed` — Group commands have no discoverable prefix; typing "group" does not surface them.
+- [x] #23 `fixed` — `:` goto-line command is not discoverable; it does not appear in the command palette.
+- [x] #24 `fixed` — `>` (next match) and `<` (prev match) do not work after a `/` search.
+
+## Passing
+
+- `g` / `G` — jump to first/last line works correctly.
+- `/` search — highlights matches correctly.
+- `--preset` — named group presets load from config file and appear correctly in the TUI and output.
+- `--lines` — output contains only selected lines with marks; no separator or summary.
+- `--summary` — output contains only group headers and annotations; no source lines.
