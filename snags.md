@@ -20,3 +20,5 @@
 - [x] #18 `fixed` — The rename modal label redundantly shows "Rename group 1".
 - [x] #19 `fixed` — Group names in the status bar are unstable; they change as the cursor moves because nearest_annotated_group only tracks groups with notes, so renamed groups without notes are ignored, and the rename action targets the wrong group.
 - [x] #20 `fixed` — Pressing 1–9 to change the active group does nothing; ListView consumed digit keys before the handler could fire.
+- [x] #21 `fixed` — Command palette shows no results on an empty query; groups only appear after typing.
+- [x] #22 `fixed` — Group commands have no discoverable prefix; typing "group" does not surface them.

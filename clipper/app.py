@@ -3,6 +3,7 @@
 import functools
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.command import Provider, Hit, Hits
 from textual.message import Message
 from textual.widgets import Footer, Header, Label, ListView, ListItem, Static
 from textual import events
@@ -15,6 +16,41 @@ from clipper.highlight import highlighted_lines
 from clipper.model import DocumentModel, LineState
 from clipper.output import render_output
 from clipper.widgets import AnnotationModal, RenameModal
+
+
+class GroupProvider(Provider):
+    """Command palette provider showing all active groups with names and notes."""
+
+    async def search(self, query: str) -> Hits:
+        app: ClipperApp = self.app  # type: ignore
+        model = app._model
+        used = sorted(model.selected_groups())
+        matcher = self.matcher(query)
+
+        for group in used:
+            label = model.group_label(group)
+            annotation = model.annotations.get(group)
+            note = annotation.text if annotation else ""
+            colour = GROUP_COLOURS[group]
+
+            searchable = f"group {group}: {label}  {note}"
+            score = matcher.match(searchable) if query else 1.0
+            if score == 0:
+                continue
+
+            display = Text()
+            display.append("● ", style=Style(color=colour, bold=True))
+            display.append(f"group {group}: ", style="dim")
+            display.append(label, style=Style(color=colour, bold=True))
+            if note:
+                display.append(f"  —  {note}", style="dim")
+
+            first_line = next(
+                (idx for idx, line in enumerate(model.lines) if line.group == group), None
+            )
+            command = functools.partial(app._jump_to_line, first_line) if first_line is not None else app._noop
+
+            yield Hit(score=score, match_display=display, command=command)
 
 
 class LineListView(ListView):
@@ -76,6 +112,7 @@ class ClipperApp(App):
     """File annotation TUI."""
 
     TITLE = "clipper"
+    COMMANDS = {GroupProvider}
 
     BINDINGS = [
         Binding("n", "annotate", "Note"),
@@ -211,6 +248,12 @@ class ClipperApp(App):
 
     def action_quit_no_output(self) -> None:
         self.exit(None)
+
+    def _jump_to_line(self, idx: int) -> None:
+        self._line_view().move_cursor(idx)
+
+    def _noop(self) -> None:
+        pass
 
     def on_line_list_view_group_selected(self, event: LineListView.GroupSelected) -> None:
         self._refresh_status()
