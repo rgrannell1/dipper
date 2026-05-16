@@ -7,9 +7,13 @@ _dipper() {
     '--header[label shown above the line list]:string:' \
     '--groups[comma-separated group names (e.g. bug,note,todo)]:csv:' \
     '--preset[named group preset]:preset:(priorities cr)' \
+    '--full[output full annotated file]' \
     '--lines[output selected lines with marks only]' \
     '--summary[output group summary block only]' \
-    '--output[write output to FILE instead of stdout]:output file:_files'
+    '--json[output annotations as JSON]' \
+    '--output[write output to FILE; bare --output auto-derives path]:output file:_files' \
+    '--load[restore session from an annotations file]:annotations file:_files' \
+    '--files[annotate unannotated files matching GLOB]:glob pattern:'
 }
 
 _dipper "$@"
