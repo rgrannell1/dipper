@@ -2,6 +2,8 @@
 
 # Dipper
 
+[![CI](https://github.com/rgrannell1/dipper/actions/workflows/ci.yml/badge.svg)](https://github.com/rgrannell1/dipper/actions/workflows/ci.yml)
+
 Interactive file annotation.
 
 ![Demo](demo.gif)
