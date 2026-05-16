@@ -47,6 +47,30 @@ dipper --groups "todo,bug" < file
 dipper <file> --lines --summary --output <somewhere custom>
 ```
 
+**Save and resume a session**
+
+Use `--output` to write an annotations file (optionally add your own named)
+```sh
+dipper src/app.py --preset cr --output
+# writes src/app.py.annotations
+```
+
+edit with `--load`
+
+```sh
+dipper src/app.py --load src/app.py.annotations
+```
+
+**Batch annotation**
+
+`--files` annotates every file matching a glob that does not yet have a `.annotations` file.
+
+```sh
+dipper --files 'src/**/*.py' --preset cr --output
+```
+
+Each file is opened in turn; finished files are skipped on re-runs.
+
 ## Output Format
 
 All metadata lines are prefixed with `%%dipper:`
