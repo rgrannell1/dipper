@@ -1,4 +1,4 @@
-# Colour themes ported from maxima — each bundles a Textual app theme and a Pygments syntax style.
+"""Colour themes ported from maxima — each bundles a Textual app theme and a Pygments syntax style."""
 
 from typing import ClassVar
 

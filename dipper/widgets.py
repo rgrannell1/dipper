@@ -1,4 +1,4 @@
-# Custom Textual widgets: LineListView
+"""Custom Textual widgets: LineListView"""
 
 from typing import ClassVar
 

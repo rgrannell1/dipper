@@ -1,4 +1,4 @@
-# Syntax highlighting: converts source text to Rich-marked-up lines
+"""Syntax highlighting: converts source text to Rich-marked-up lines"""
 
 from pygments import highlight
 from pygments.formatters import TerminalTrueColorFormatter

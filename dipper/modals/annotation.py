@@ -1,4 +1,4 @@
-# Popup modal for entering annotation text for a group.
+"""Popup modal for entering annotation text for a group."""
 
 from pathlib import Path
 from typing import ClassVar

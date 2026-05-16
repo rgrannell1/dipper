@@ -1,1 +1,1 @@
-# dipper — interactive file annotation TUI
+"""dipper — interactive file annotation TUI"""

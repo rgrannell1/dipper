@@ -1,4 +1,4 @@
-# Popup modal for : (goto line) and / (search) command bar.
+"""Popup modal for : (goto line) and / (search) command bar."""
 
 from pathlib import Path
 from typing import ClassVar

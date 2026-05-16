@@ -1,4 +1,4 @@
-# Generates the annotated output format from the document model
+"""Generates the annotated output format from the document model"""
 
 from dipper.constants import (
     GROUP_FORMAT,

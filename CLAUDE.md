@@ -24,9 +24,10 @@ Run all lint checks:
 
 ```
 uv run ruff check dipper/
-python3 /home/rg/Agents/skills/rg-pylint/scripts/private_methods.py dipper/*.py
-python3 /home/rg/Agents/skills/rg-pylint/scripts/single_letter_vars.py dipper/*.py
-python3 /home/rg/Agents/skills/rg-pylint/scripts/line_complexity.py dipper/*.py
+python3 /home/rg/Agents/skills/rg-pylint/scripts/private_methods.py dipper/*.py dipper/actions/*.py dipper/modals/*.py
+python3 /home/rg/Agents/skills/rg-pylint/scripts/single_letter_vars.py dipper/*.py dipper/actions/*.py dipper/modals/*.py
+python3 /home/rg/Agents/skills/rg-pylint/scripts/line_complexity.py dipper/*.py dipper/actions/*.py dipper/modals/*.py
+python3 /home/rg/Agents/skills/rg-pylint/scripts/module_docstring.py dipper/*.py dipper/actions/*.py dipper/modals/*.py
 ```
 
 ## Code conventions
@@ -35,3 +36,4 @@ python3 /home/rg/Agents/skills/rg-pylint/scripts/line_complexity.py dipper/*.py
 - **No functions longer than 14 statements.** Enforced by ruff `PLR0915`.
 - **No single-letter variable names** (except `_` throwaway). Enforced by `single_letter_vars.py`.
 - **CSS in `.tcss` files only.** No inline `CSS = """..."""` strings in Python classes.
+- **Module docstrings required.** Every `.py` file must start with a `"""..."""` docstring, not a `#` comment. Enforced by `module_docstring.py`.

@@ -1,4 +1,4 @@
-# CLI argument helpers: source reading, config merging, group resolution
+"""CLI argument helpers: source reading, config merging, group resolution"""
 
 import argparse
 import sys

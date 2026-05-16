@@ -1,4 +1,4 @@
-# Constants for the dipper annotation tool
+"""Constants for the dipper annotation tool"""
 
 # Number of colour groups available to the user (1-9)
 GROUP_COUNT = 9

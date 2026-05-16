@@ -1,4 +1,4 @@
-# CLI entry point — reads from file path argument or stdin
+"""CLI entry point — reads from file path argument or stdin"""
 
 import argparse
 

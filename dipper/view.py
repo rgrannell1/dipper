@@ -1,4 +1,4 @@
-# View layer: pure render helpers
+"""View layer: pure render helpers"""
 
 from __future__ import annotations
 

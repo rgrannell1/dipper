@@ -1,4 +1,4 @@
-# Exports all modal screens.
+"""Exports all modal screens."""
 
 from dipper.modals.annotation import AnnotationModal
 from dipper.modals.command import CommandModal

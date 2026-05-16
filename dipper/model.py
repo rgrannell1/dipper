@@ -1,4 +1,4 @@
-# AppState: thin coordinator that delegates to sub-state objects in state.py.
+"""AppState: thin coordinator that delegates to sub-state objects in state.py."""
 
 from dipper.constants import GROUP_COUNT
 from dipper.state import (

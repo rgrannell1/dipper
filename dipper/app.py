@@ -1,4 +1,4 @@
-# Main Textual application for dipper
+"""Main Textual application for dipper"""
 
 from pathlib import Path
 from typing import ClassVar

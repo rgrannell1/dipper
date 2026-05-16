@@ -1,4 +1,4 @@
-# Modal showing all nine groups for bulk name management.
+"""Modal showing all nine groups for bulk name management."""
 
 import functools
 from pathlib import Path

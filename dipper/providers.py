@@ -1,4 +1,4 @@
-# Command palette providers: GroupProvider and ThemeProvider
+"""Command palette providers: GroupProvider and ThemeProvider"""
 
 from __future__ import annotations
 

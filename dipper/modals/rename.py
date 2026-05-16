@@ -1,4 +1,4 @@
-# Popup modal for renaming a group.
+"""Popup modal for renaming a group."""
 
 from pathlib import Path
 from typing import ClassVar
