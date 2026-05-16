@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 .python-version
 design.md
+expectations.md
+requirements.md
+snags.md
