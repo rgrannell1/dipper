@@ -60,7 +60,8 @@ class LineListView(ListView):
         """Full rendered line: gutter + indicator + syntax-highlighted source text."""
         line = self._model.lines[idx]
         hi_text = Text.from_ansi(self._hi_lines[idx])
-        if line.group != 0:
+        is_annotated = line.group != 0
+        if is_annotated:
             hi_text.stylize(f"bold {GROUP_COLOURS[line.group]}")
         gutter = self.gutter(idx)
         indicator = self.indicator(idx, line.group)
@@ -85,7 +86,8 @@ class LineListView(ListView):
 
     def on_key(self, event: events.Key) -> None:
         ch = event.character
-        if ch is not None and ch.isdigit() and ch != "0":
+        is_group_digit = ch is not None and ch.isdigit() and ch != "0"
+        if is_group_digit:
             self.app.set_group(int(ch))  # type: ignore[attr-defined]
             event.stop()
 

@@ -32,6 +32,22 @@ def group_score(matcher, query: str, searchable: str) -> float:
     return matcher.match(searchable) if query else 1.0
 
 
+def group_hit(app: ClipperApp, matcher, query: str, group: int) -> Hit | None:
+    model = app._model
+    label = model.group_label(group)
+    annotation = model.groups.annotations.get(group)
+    note = annotation.text if annotation else ""
+    searchable = f"group {group}: {label}  {note}"
+    score = group_score(matcher, query, searchable)
+    if score == 0:
+        return None
+    first_line = next(
+        (idx for idx, line in enumerate(model.lines) if line.group == group), None
+    )
+    command = functools.partial(app.jump_to_line, first_line) if first_line is not None else (lambda: None)
+    return Hit(score=score, match_display=group_display(group, label, note), command=command)
+
+
 def theme_display(name: str, primary: str) -> Text:
     result = Text()
     result.append("◉ ", style=f"bold {primary}")
@@ -46,28 +62,10 @@ class GroupProvider(Provider):
         app: ClipperApp = self.app  # type: ignore
         model = app._model
         matcher = self.matcher(query)
-
         for group in sorted(model.selected_groups()):
-            label = model.group_label(group)
-            annotation = model.groups.annotations.get(group)
-            note = annotation.text if annotation else ""
-
-            searchable = f"group {group}: {label}  {note}"
-            score = group_score(matcher, query, searchable)
-            if score == 0:
-                continue
-
-            first_line = next(
-                (idx for idx, line in enumerate(model.lines) if line.group == group), None
-            )
-            jump = functools.partial(app.jump_to_line, first_line)
-            command = jump if first_line is not None else (lambda: None)
-
-            yield Hit(
-                score=score,
-                match_display=group_display(group, label, note),
-                command=command,
-            )
+            hit = group_hit(app, matcher, query, group)
+            if hit is not None:
+                yield hit
 
 
 class ThemeProvider(Provider):
