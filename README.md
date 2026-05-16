@@ -30,6 +30,14 @@ There are some preset groupings:
 
 ## Examples
 
+```sh
+dipper <file> --preset cr
+dipper --groups "todo,bug" < file
+```
+
+```sh
+dipper <file> --lines --summary --output <somewhere custom>
+```
 
 ## Output Format
 
