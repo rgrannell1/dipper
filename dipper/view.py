@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
-from textual.binding import Binding
-from textual.command import Provider, Hit, Hits
-from textual.message import Message
-from textual.widgets import ListView, ListItem, Static
-from textual import events
-
-from rich.text import Text
 from rich.style import Style
+from rich.text import Text
+from textual import events
+from textual.binding import Binding
+from textual.command import Hit, Hits, Provider
+from textual.message import Message
+from textual.widgets import ListItem, ListView, Static
 
 from dipper.constants import GROUP_COLOURS
 from dipper.model import AppState
+from dipper.themes import THEMES
 
 if TYPE_CHECKING:
     from dipper.app import ClipperApp
@@ -39,8 +39,7 @@ def group_display(group: int, label: str, note: str) -> Text:
     return display
 
 
-def group_score(matcher, query: str, group: int, label: str, note: str) -> float:
-    searchable = f"group {group}: {label}  {note}"
+def group_score(matcher, query: str, searchable: str) -> float:
     return matcher.match(searchable) if query else 1.0
 
 
@@ -156,7 +155,8 @@ class GroupProvider(Provider):
             annotation = model.annotations.get(group)
             note = annotation.text if annotation else ""
 
-            score = group_score(matcher, query, group, label, note)
+            searchable = f"group {group}: {label}  {note}"
+            score = group_score(matcher, query, searchable)
             if score == 0:
                 continue
 
@@ -164,7 +164,7 @@ class GroupProvider(Provider):
                 (idx for idx, line in enumerate(model.lines) if line.group == group), None
             )
             jump = functools.partial(app.jump_to_line, first_line)
-            command = jump if first_line is not None else app.noop
+            command = jump if first_line is not None else (lambda: None)
 
             yield Hit(
                 score=score,
@@ -184,7 +184,6 @@ class ThemeProvider(Provider):
     """Command palette provider listing all available colour themes."""
 
     async def search(self, query: str) -> Hits:
-        from dipper.themes import THEMES
         app: ClipperApp = self.app  # type: ignore
         matcher = self.matcher(query)
 
@@ -210,7 +209,7 @@ class LineListView(ListView):
     class LineToggled(Message):
         pass
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[Binding]] = [
         Binding("tab", "toggle_line", "Select line", priority=True),
     ]
 

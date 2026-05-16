@@ -1,6 +1,6 @@
 # Constants for the dipper annotation tool
 
-# Number of colour groups available to the user (1–9)
+# Number of colour groups available to the user (1-9)
 GROUP_COUNT = 9
 
 # Prefix shared by all dipper-generated output lines
@@ -24,7 +24,7 @@ GROUP_FORMAT = "%%dipper:group:{group}:{ranges}%%"
 # Metadata line emitted as the first line of output when a source filepath is known
 META_FILEPATH_FORMAT = "%%dipper:meta:filepath:{filepath}%%"
 
-# Colours for groups 1–9, indexed by group number (1-based, index 0 unused)
+# Colours for groups 1-9, indexed by group number (1-based, index 0 unused)
 GROUP_COLOURS = [
     "",          # placeholder, groups are 1-based
     "bright_red",

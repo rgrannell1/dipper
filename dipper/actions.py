@@ -9,7 +9,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dipper.app import ClipperApp
 
+from textual.css.query import NoMatches
+
+from dipper.highlight import highlighted_lines
 from dipper.modals import AnnotationModal, CommandModal, GroupsModal, RenameModal
+from dipper.themes import DEFAULT_THEME, THEMES
 from dipper.view import LineListView
 
 
@@ -23,7 +27,7 @@ def cursor_group(app: ClipperApp) -> int:
     # Returns 0 when the view isn't mounted yet or the cursor sits on an unassigned line.
     try:
         idx = app.line_view().cursor_index
-    except Exception:
+    except NoMatches:
         return 0
     lines = app._model.lines
     return lines[idx].group if idx < len(lines) else 0
@@ -168,8 +172,6 @@ def open_groups_overview(app: ClipperApp) -> None:
 
 
 def change_theme(app: ClipperApp, theme_name: str) -> None:
-    from dipper.themes import THEMES, DEFAULT_THEME
-    from dipper.highlight import highlighted_lines
     entry = THEMES.get(theme_name, THEMES[DEFAULT_THEME])
     new_hi_lines = highlighted_lines(app._source, app._source_filename, style=entry["pygments"])
     app._hi_lines = new_hi_lines

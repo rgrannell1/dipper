@@ -1,6 +1,7 @@
 # Popup modal for : (goto line) and / (search) command bar.
 
 from pathlib import Path
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -12,7 +13,7 @@ from textual.widgets import Input, Label
 class CommandModal(ModalScreen[str | None]):
     """Bottom command-bar for : (goto line) and / (search) commands."""
 
-    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+    BINDINGS: ClassVar[list[Binding]] = [Binding("escape", "cancel", "Cancel")]
     CSS_PATH = str(Path(__file__).parent / "command.tcss")
 
     def __init__(self, prefix: str) -> None:

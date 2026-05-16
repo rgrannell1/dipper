@@ -79,7 +79,7 @@ def render_full(
 ) -> str:
     if not model.selected_groups():
         return "\n".join(body_lines)
-    summary_block = ["", SEPARATOR_LINE, ""] + build_summary(model, group_line_numbers)
+    summary_block = ["", SEPARATOR_LINE, "", *build_summary(model, group_line_numbers)]
     return "\n".join(body_lines + summary_block)
 
 

@@ -1,27 +1,30 @@
 # Main Textual application for dipper
 
+from pathlib import Path
+from typing import ClassVar
+
+from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
-from textual import events
 
+from dipper import actions
 from dipper.highlight import highlighted_lines
 from dipper.model import AppState
-from dipper.state import LineState
 from dipper.output import render_output
-from dipper.themes import THEMES, DEFAULT_THEME
+from dipper.state import LineState
+from dipper.themes import DEFAULT_THEME, THEMES
 from dipper.view import GroupProvider, LineListView, ThemeProvider, status_bar_text
-from dipper import actions
 
 
 class ClipperApp(App):
     """File annotation TUI."""
 
     TITLE = "dipper"
-    COMMANDS = {GroupProvider, ThemeProvider}
+    COMMANDS: ClassVar[set] = {GroupProvider, ThemeProvider}
     CSS_PATH = "app.tcss"
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[Binding]] = [
         Binding("n", "annotate", "Note"),
         Binding("r", "rename_group", "Rename"),
         Binding("f", "fill_range", "Fill range"),
@@ -34,10 +37,11 @@ class ClipperApp(App):
         Binding("o", "groups_overview", "Groups"),
     ]
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         source: str,
         filename: str | None,
+        *,
         prompt: str | None = None,
         header: str | None = None,
         group_names: dict[int, str] | None = None,
@@ -47,9 +51,8 @@ class ClipperApp(App):
     ) -> None:
         super().__init__()
         theme_entry = THEMES.get(theme, THEMES[DEFAULT_THEME])
-        lines = source.splitlines()
         self._model = AppState(
-            lines=[LineState(text=line) for line in lines],
+            lines=[LineState(text=line) for line in source.splitlines()],
             group_names=dict(group_names or {}),
         )
         self._source = source
@@ -62,8 +65,7 @@ class ClipperApp(App):
         self._output_summary = output_summary
         self.register_theme(theme_entry["textual"])
         self.theme = theme_entry["textual"].name
-        if prompt is not None:
-            self.sub_title = prompt
+        self.sub_title = prompt or ""
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -84,9 +86,6 @@ class ClipperApp(App):
 
     def set_group(self, group: int) -> None:
         actions.set_group(self, group)
-
-    def noop(self) -> None:
-        pass
 
     def change_theme(self, theme_name: str) -> None:
         actions.change_theme(self, theme_name)
@@ -145,9 +144,10 @@ class ClipperApp(App):
         actions.open_groups_overview(self)
 
 
-def run(
+def run(  # noqa: PLR0913
     source: str,
     filename: str | None,
+    *,
     prompt: str | None = None,
     header: str | None = None,
     group_names: dict[int, str] | None = None,
@@ -164,7 +164,6 @@ def run(
     result = app.run()
     if result:
         if output_path:
-            from pathlib import Path
             Path(output_path).write_text(result)
         else:
             print(result)

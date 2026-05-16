@@ -5,6 +5,7 @@ import os
 import shlex
 import sys
 from pathlib import Path
+
 from dipper.app import run
 
 
@@ -82,7 +83,7 @@ def read_source(
     args: argparse.Namespace, parser: argparse.ArgumentParser
 ) -> tuple[str, str | None]:
     if args.file:
-        return open(args.file).read(), args.file
+        return Path(args.file).read_text(), args.file
     if sys.stdin.isatty():
         parser.print_usage(sys.stderr)
         sys.exit(1)
@@ -103,7 +104,7 @@ def main() -> None:
     parser = build_parser()
     config_flag_tokens, presets = parse_config(config_path())
     config_ns = (
-        parser.parse_args(config_flag_tokens + ["--"])
+        parser.parse_args([*config_flag_tokens, "--"])
         if config_flag_tokens
         else argparse.Namespace()
     )

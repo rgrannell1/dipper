@@ -1,6 +1,7 @@
 # Popup modal for entering annotation text for a group.
 
 from pathlib import Path
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -13,7 +14,7 @@ from dipper.view import annotation_modal_title
 class AnnotationModal(ModalScreen[str]):
     """Popup for entering annotation text for a group."""
 
-    BINDINGS = [Binding("escape", "dismiss('')", "Cancel")]
+    BINDINGS: ClassVar[list[Binding]] = [Binding("escape", "dismiss('')", "Cancel")]
     CSS_PATH = str(Path(__file__).parent / "annotation.tcss")
 
     def __init__(self, group: int, label: str, existing: str = "") -> None:

@@ -2,23 +2,24 @@
 
 import functools
 from pathlib import Path
+from typing import ClassVar
 
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import ListView, Static
-from textual import events
 
 from dipper.constants import GROUP_COUNT
-from dipper.model import AppState
 from dipper.modals.rename import RenameModal
-from dipper.view import group_row_text, group_row_item
+from dipper.model import AppState
+from dipper.view import group_row_item, group_row_text
 
 
 class GroupsModal(ModalScreen[None]):
     """Overview of all nine groups: shows names and line counts, supports inline rename and clear."""
 
-    BINDINGS = [Binding("escape", "dismiss", "Close")]
+    BINDINGS: ClassVar[list[Binding]] = [Binding("escape", "dismiss", "Close")]
     CSS_PATH = str(Path(__file__).parent / "groups.tcss")
 
     def __init__(self, model: AppState) -> None:

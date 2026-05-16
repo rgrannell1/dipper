@@ -1,16 +1,17 @@
 # Colour themes ported from maxima — each bundles a Textual app theme and a Pygments syntax style.
 
-from pygments.style import Style
-from pygments.token import Token, Comment, Keyword, Name, String, Number, Operator, Punctuation
-from textual.theme import Theme
+from typing import ClassVar
 
+from pygments.style import Style
+from pygments.token import Comment, Keyword, Name, Number, Operator, Punctuation, String, Token
+from textual.theme import Theme
 
 # ── Pygments styles ───────────────────────────────────────────────────────────
 
 
 class RoseateStyle(Style):
     background_color = "#2c2833"
-    styles = {
+    styles: ClassVar[dict] = {
         Token:              "#FFF0F5",
         Comment:            "#6b5c70",
         Keyword:            "#ff82cb",
@@ -28,7 +29,7 @@ class RoseateStyle(Style):
 
 class DarkStyle(Style):
     background_color = "#0d0d0d"
-    styles = {
+    styles: ClassVar[dict] = {
         Token:              "#c8c8c8",
         Comment:            "#666666",
         Keyword:            "#5fafff",
@@ -45,7 +46,7 @@ class DarkStyle(Style):
 
 class LavenderStyle(Style):
     background_color = "#f5f0ff"
-    styles = {
+    styles: ClassVar[dict] = {
         Token:              "#2d1f5e",
         Comment:            "#9b8ab8",
         Keyword:            "#7c4dce",
@@ -62,7 +63,7 @@ class LavenderStyle(Style):
 
 class DraculaStyle(Style):
     background_color = "#282A36"
-    styles = {
+    styles: ClassVar[dict] = {
         Token:              "#F8F8F2",
         Comment:            "#6272A4",
         Keyword:            "#FF79C6",
@@ -80,7 +81,7 @@ class DraculaStyle(Style):
 
 class DarkPlusStyle(Style):
     background_color = "#1E1E1E"
-    styles = {
+    styles: ClassVar[dict] = {
         Token:              "#D4D4D4",
         Comment:            "#6A9955",
         Keyword:            "#569CD6",
@@ -97,7 +98,7 @@ class DarkPlusStyle(Style):
 
 class LightPlusStyle(Style):
     background_color = "#FFFFFF"
-    styles = {
+    styles: ClassVar[dict] = {
         Token:              "#000000",
         Comment:            "#008000",
         Keyword:            "#0000FF",
@@ -114,7 +115,7 @@ class LightPlusStyle(Style):
 
 class GitHubLightStyle(Style):
     background_color = "#FFFFFF"
-    styles = {
+    styles: ClassVar[dict] = {
         Token:              "#24292E",
         Comment:            "#6A737D",
         Keyword:            "#D73A49",
@@ -242,13 +243,13 @@ GITHUB_LIGHT = Theme(
 
 
 THEMES: dict[str, dict] = {
-    "roseate":      {"textual": ROSEATE,      "pygments": RoseateStyle},
-    "dark":         {"textual": DARK,          "pygments": DarkStyle},
-    "lavender":     {"textual": LAVENDER,      "pygments": LavenderStyle},
-    "dracula":      {"textual": DRACULA,       "pygments": DraculaStyle},
-    "dark-plus":    {"textual": DARK_PLUS,     "pygments": DarkPlusStyle},
-    "light-plus":   {"textual": LIGHT_PLUS,    "pygments": LightPlusStyle},
-    "github-light": {"textual": GITHUB_LIGHT,  "pygments": GitHubLightStyle},
+    "roseate":      {"textual": ROSEATE, "pygments": RoseateStyle},
+    "dark":         {"textual": DARK, "pygments": DarkStyle},
+    "lavender":     {"textual": LAVENDER, "pygments": LavenderStyle},
+    "dracula":      {"textual": DRACULA, "pygments": DraculaStyle},
+    "dark-plus":    {"textual": DARK_PLUS, "pygments": DarkPlusStyle},
+    "light-plus":   {"textual": LIGHT_PLUS, "pygments": LightPlusStyle},
+    "github-light": {"textual": GITHUB_LIGHT, "pygments": GitHubLightStyle},
 }
 
 DEFAULT_THEME = "roseate"

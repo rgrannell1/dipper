@@ -1,6 +1,7 @@
 # Popup modal for renaming a group.
 
 from pathlib import Path
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -15,7 +16,7 @@ CSS_PATH = Path(__file__).parent / "rename.tcss"
 class RenameModal(ModalScreen[str]):
     """Popup for renaming a group."""
 
-    BINDINGS = [Binding("escape", "dismiss('')", "Cancel")]
+    BINDINGS: ClassVar[list[Binding]] = [Binding("escape", "dismiss('')", "Cancel")]
     CSS_PATH = str(Path(__file__).parent / "rename.tcss")
 
     def __init__(self, group: int, existing: str = "") -> None:

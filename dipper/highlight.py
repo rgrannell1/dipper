@@ -2,10 +2,11 @@
 
 from pygments import highlight
 from pygments.formatters import TerminalTrueColorFormatter
-from pygments.lexers import get_lexer_by_name, guess_lexer
-from pygments.lexers import get_lexer_for_filename
+from pygments.lexers import get_lexer_by_name, get_lexer_for_filename, guess_lexer
 from pygments.style import Style
 from pygments.util import ClassNotFound
+
+from dipper.themes import DEFAULT_THEME, THEMES
 
 
 def choose_lexer(source: str, filename: str | None):
@@ -22,7 +23,6 @@ def choose_lexer(source: str, filename: str | None):
 
 def highlighted_lines(source: str, filename: str | None = None, style: type[Style] | None = None) -> list[str]:
     """Return source split into lines with ANSI colour codes applied."""
-    from dipper.themes import THEMES, DEFAULT_THEME
     resolved_style = style or THEMES[DEFAULT_THEME]["pygments"]
     lexer = choose_lexer(source, filename)
     formatter = TerminalTrueColorFormatter(style=resolved_style)
