@@ -9,6 +9,7 @@ from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
 
 from dipper import actions
+from dipper.bindings import APP_BINDINGS
 from dipper.highlight import highlighted_lines
 from dipper.model import AppState
 from dipper.output import render_output
@@ -26,18 +27,7 @@ class ClipperApp(App):
     COMMANDS: ClassVar[set] = {GroupProvider, ThemeProvider}
     CSS_PATH = "app.tcss"
 
-    BINDINGS: ClassVar[list[Binding]] = [
-        Binding("n", "annotate", "Note"),
-        Binding("r", "rename_group", "Rename"),
-        Binding("f", "fill_range", "Fill range"),
-        Binding("q", "write_output", "Write & quit"),
-        Binding("colon", "goto_line", "Go to line"),
-        Binding("slash", "search", "Search"),
-        Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
-        Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
-        Binding("x", "reset", "Reset"),
-        Binding("o", "groups_overview", "Groups"),
-    ]
+    BINDINGS: ClassVar[list[Binding]] = APP_BINDINGS
 
     def __init__(  # noqa: PLR0913
         self,

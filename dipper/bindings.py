@@ -1,0 +1,18 @@
+"""Key bindings for the dipper ClipperApp."""
+
+from typing import ClassVar
+
+from textual.binding import Binding
+
+APP_BINDINGS: ClassVar[list[Binding]] = [
+    Binding("n", "annotate", "Note"),
+    Binding("r", "rename_group", "Rename"),
+    Binding("f", "fill_range", "Fill range"),
+    Binding("q", "write_output", "Write & quit"),
+    Binding("colon", "goto_line", "Go to line"),
+    Binding("slash", "search", "Search"),
+    Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
+    Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
+    Binding("x", "reset", "Reset"),
+    Binding("o", "groups_overview", "Groups"),
+]
