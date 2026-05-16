@@ -1,6 +1,5 @@
 # Tests for XDG config file parsing and --preset resolution
 
-import sys
 import tempfile
 import textwrap
 from pathlib import Path
@@ -90,3 +89,17 @@ class TestResolveGroups:
     def test_unknown_preset_exits(self):
         with pytest.raises(SystemExit):
             resolve_groups(self.ns(preset="nonexistent"), {})
+
+
+class TestMalformedConfig:
+    def test_malformed_line_prints_warning_to_stderr(self, capsys):
+        "Proves parse_config warns on lines that are not comments, flags, or presets."
+        path = write_config("this-is-not-valid\n")
+        parse_config(path)
+        assert "malformed" in capsys.readouterr().err
+
+    def test_valid_lines_do_not_warn(self, capsys):
+        "Proves parse_config emits no warnings for well-formed config files."
+        path = write_config("# comment\n--prompt foo\ntesting: bug,critical\n")
+        parse_config(path)
+        assert capsys.readouterr().err == ""

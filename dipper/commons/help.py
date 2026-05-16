@@ -3,16 +3,15 @@
 from rich.console import Console
 from rich.text import Text
 
-
 RULE = "─" * 45
 
 EXAMPLES = [
-    ("dipper <file>",                    "open a file interactively"),
-    ("dipper <file> --preset cr",        "code-review groups"),
-    ("dipper <file> --groups bug,note",  "custom groups"),
-    ("dipper <file> --output out.txt",   "save annotations to file"),
-    ("dipper --lines < file",            "output marked lines only"),
-    ("dipper --summary < file",          "output summary block only"),
+    ("dipper <file>", "open a file interactively"),
+    ("dipper <file> --preset cr", "code-review groups"),
+    ("dipper <file> --groups bug,note", "custom groups"),
+    ("dipper <file> --output out.txt", "save annotations to file"),
+    ("dipper --lines < file", "output marked lines only"),
+    ("dipper --summary < file", "output summary block only"),
 ]
 
 FOOTER_FLAGS = ["dipper <file>", "--preset", "--groups", "--lines", "--summary", "--output"]

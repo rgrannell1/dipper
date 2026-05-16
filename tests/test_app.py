@@ -2,12 +2,10 @@ import re
 import tempfile
 from pathlib import Path
 
-import pytest
-from textual.widgets import Input, Label
+from textual.widgets import Label
 
-from dipper.view.app import ClipperApp, LineListView, run
 from dipper.commons.constants import DIPPER_PREFIX, SEPARATOR_LINE
-
+from dipper.view.app import ClipperApp, LineListView
 
 SOURCE = "alpha\nbeta\ngamma"
 
@@ -118,7 +116,6 @@ class TestGroupsOverview:
             assert isinstance(pilot.app.screen, GroupsModal)
 
     async def test_modal_shows_all_nine_groups(self):
-        from dipper.view.modals.groups import GroupsModal
         from textual.widgets import ListView
         async with make_app().run_test() as pilot:
             await pilot.press("o")
@@ -611,3 +608,69 @@ class TestMetadataFilepath:
             await pilot.pause()
         output = app._return_value
         assert output.startswith("%%dipper:meta:filepath:src/main.py%%")
+
+
+class TestNavigation:
+    async def test_g_jumps_to_first_line(self):
+        "Proves g key scrolls the list to the first line."
+        async with make_app().run_test() as pilot:
+            await pilot.press("down")
+            await pilot.press("down")
+            await pilot.press("g")
+            assert pilot.app.query_one(LineListView).index == 0
+
+    async def test_shift_g_jumps_to_last_line(self):
+        "Proves G key scrolls the list to the last line."
+        async with make_app().run_test() as pilot:
+            await pilot.press("G")
+            assert pilot.app.query_one(LineListView).index == 2
+
+    async def test_zero_key_does_not_change_active_group(self):
+        "Proves pressing 0 is ignored - groups are numbered 1-9."
+        async with make_app().run_test() as pilot:
+            await pilot.press("0")
+            assert pilot.app._model.active_group == 1
+
+
+class TestSearch:
+    async def test_search_populates_match_indices(self):
+        "Proves the search modal populates model.search.indices on submit."
+        async with make_app().run_test() as pilot:
+            await pilot.press("slash")
+            await pilot.pause(delay=0.1)
+            for ch in "alpha":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            assert 0 in pilot.app._model.search.indices
+
+    async def test_search_jumps_to_first_match(self):
+        "Proves the list cursor moves to the first matching line after search."
+        async with make_app().run_test() as pilot:
+            await pilot.press("slash")
+            await pilot.pause(delay=0.1)
+            for ch in "gamma":
+                await pilot.press(ch)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            assert pilot.app.query_one(LineListView).index == 2
+
+    async def test_star_assigns_matched_lines_to_active_group(self):
+        "Proves * assigns every matched line to the current active group."
+        async with make_app().run_test() as pilot:
+            pilot.app._model.search.set("a", [0, 2])
+            await pilot.press("*")
+            model = pilot.app._model
+            assert model.lines[0].group == 1
+            assert model.lines[1].group == 0
+            assert model.lines[2].group == 1
+
+    async def test_empty_search_clears_matches(self):
+        "Proves submitting an empty search string clears existing match indices."
+        async with make_app().run_test() as pilot:
+            pilot.app._model.search.set("alpha", [0])
+            await pilot.press("slash")
+            await pilot.pause(delay=0.1)
+            await pilot.press("enter")
+            await pilot.pause(delay=0.1)
+            assert pilot.app._model.search.indices == []

@@ -21,7 +21,7 @@ dev = [
 include = ["dipper*"]
 
 [tool.setuptools.package-data]
-dipper = ["modals/*.tcss", "*.tcss"]
+dipper = ["*.tcss", "view/*.tcss", "view/modals/*.tcss"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
