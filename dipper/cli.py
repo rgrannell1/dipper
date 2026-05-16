@@ -1,56 +1,14 @@
 """CLI argument helpers: source reading, config merging, group resolution"""
 
 import argparse
-import glob
 import sys
 from pathlib import Path
 
 from dipper.commons.config import config_path, parse_config
 from dipper.commons.constants import BUILTIN_PRESETS
 from dipper.commons.help import print_help
+from dipper.commons.paths import AUTO_OUTPUT_SENTINEL, annotation_path, find_unannotated_files, resolve_output_path
 from dipper.view.app import run
-
-# Sentinel value for bare --output (no path given), meaning auto-derive from filename
-AUTO_OUTPUT_SENTINEL = "__auto__"
-
-
-def annotation_path(fpath: Path) -> Path:
-    return Path(str(fpath) + ".annotations")
-
-
-def resolve_output_path(output_arg: str | None, filename: str | None) -> str | None:
-    """Resolve --output: None means stdout, sentinel means auto <fpath>.annotations, else literal path."""
-    if output_arg is None:
-        return None
-    if output_arg == AUTO_OUTPUT_SENTINEL:
-        if filename is None:
-            print("dipper: bare --output requires a file argument", file=sys.stderr)
-            sys.exit(1)
-        return str(annotation_path(Path(filename)))
-    return output_arg
-
-
-def find_unannotated_files(glob_pattern: str) -> list[Path]:
-    """Return files matching glob_pattern that have no corresponding .annotations file."""
-    matched = sorted(Path(path_str) for path_str in glob.glob(glob_pattern, recursive=True))
-    return [fpath for fpath in matched if fpath.is_file() and not annotation_path(fpath).exists()]
-
-
-def run_files_mode(args: argparse.Namespace, group_names: dict[int, str]) -> None:
-    """Cycle through unannotated files matching the glob, opening each in turn."""
-    files = find_unannotated_files(args.files)
-    if not files:
-        print("dipper: no unannotated files found", file=sys.stderr)
-        return
-    for fpath in files:
-        source = fpath.read_text()
-        out_path = str(annotation_path(fpath))
-        run(
-            source, str(fpath),
-            prompt=args.prompt, header=args.header, group_names=group_names,
-            output_lines=args.lines, output_summary=args.summary, output_json=args.json,
-            output_path=out_path, load_path=None,
-        )
 
 
 def resolve_groups(args: argparse.Namespace, presets: dict[str, str]) -> str | None:
@@ -144,6 +102,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def iter_run_targets(
+    args: argparse.Namespace, parser: argparse.ArgumentParser
+):
+    """Yield (source, filename, output_path) for each file to process."""
+    if args.files:
+        for fpath in find_unannotated_files(args.files):
+            yield fpath.read_text(), str(fpath), str(annotation_path(fpath))
+    else:
+        source, filename = read_source(args, parser)
+        yield source, filename, resolve_output_path(args.output, filename)
+
+
 def main() -> None:
     """Orchestrate config loading, argument parsing, source reading, and launch the TUI."""
     parser = build_parser()
@@ -158,14 +128,14 @@ def main() -> None:
     args = cli_ns
     validate_output_flags(args)
     group_names = parse_group_names(resolve_groups(args, presets))
-    if args.files:
-        run_files_mode(args, group_names)
+    targets = list(iter_run_targets(args, parser))
+    if args.files and not targets:
+        print("dipper: no unannotated files found", file=sys.stderr)
         return
-    source, filename = read_source(args, parser)
-    output_path = resolve_output_path(args.output, filename)
-    run(
-        source, filename,
-        prompt=args.prompt, header=args.header, group_names=group_names,
-        output_lines=args.lines, output_summary=args.summary, output_json=args.json,
-        output_path=output_path, load_path=args.load,
-    )
+    for source, filename, output_path in targets:
+        run(
+            source, filename,
+            prompt=args.prompt, header=args.header, group_names=group_names,
+            output_lines=args.lines, output_summary=args.summary, output_json=args.json,
+            output_path=output_path, load_path=args.load,
+        )
