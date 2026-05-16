@@ -1,7 +1,6 @@
-# Tests for XDG config file parsing and --preset resolution
+# Tests for YAML config file parsing and --preset resolution
 
 import tempfile
-import textwrap
 from pathlib import Path
 
 import pytest
@@ -11,55 +10,89 @@ from dipper.commons.config import parse_config
 
 
 def write_config(content: str) -> Path:
-    tmp = tempfile.NamedTemporaryFile(mode="w", suffix="config", delete=False)
-    tmp.write(textwrap.dedent(content))
+    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+    tmp.write(content)
     tmp.flush()
     return Path(tmp.name)
 
 
 class TestParseConfig:
     def test_missing_file_returns_empty(self):
-        tokens, presets = parse_config(Path("/nonexistent/path/config"))
+        "Proves missing config file returns empty tokens and presets."
+        tokens, presets = parse_config(Path("/nonexistent/path/config.yaml"))
         assert tokens == []
         assert presets == {}
 
-    def test_blank_lines_ignored(self):
-        path = write_config("\n\n--prompt foo\n\n")
+    def test_empty_file_returns_empty(self):
+        "Proves empty YAML file returns empty tokens and presets."
+        path = write_config("")
         tokens, presets = parse_config(path)
-        assert tokens == ["--prompt", "foo"]
+        assert tokens == []
+        assert presets == {}
 
-    def test_comment_lines_ignored(self):
-        path = write_config("# this is a comment\n--prompt bar\n")
-        tokens, presets = parse_config(path)
-        assert tokens == ["--prompt", "bar"]
-
-    def test_flag_line_tokenised(self):
-        path = write_config('--prompt "code review"\n')
-        tokens, presets = parse_config(path)
+    def test_value_flag_produces_tokens(self):
+        "Proves a value flag key produces a --flag value token pair."
+        path = write_config("prompt: code review\n")
+        tokens, _ = parse_config(path)
         assert tokens == ["--prompt", "code review"]
 
-    def test_preset_line_parsed(self):
-        path = write_config("testing: bug,critical,security\n")
+    def test_bool_flag_true_produces_flag_token(self):
+        "Proves a true boolean flag produces a bare --flag token."
+        path = write_config("full: true\n")
+        tokens, _ = parse_config(path)
+        assert tokens == ["--full"]
+
+    def test_bool_flag_false_produces_no_token(self):
+        "Proves a false boolean flag produces no tokens."
+        path = write_config("full: false\n")
+        tokens, _ = parse_config(path)
+        assert tokens == []
+
+    def test_output_bare_true_produces_bare_flag(self):
+        "Proves output: true produces bare --output token (auto-derive path)."
+        path = write_config("output: true\n")
+        tokens, _ = parse_config(path)
+        assert tokens == ["--output"]
+
+    def test_output_path_produces_value_token(self):
+        "Proves output: /path produces --output /path token pair."
+        path = write_config("output: /tmp/out.annotations\n")
+        tokens, _ = parse_config(path)
+        assert tokens == ["--output", "/tmp/out.annotations"]
+
+    def test_presets_section_parsed(self):
+        "Proves presets section is returned as a dict, not as flag tokens."
+        path = write_config("presets:\n  testing: bug,critical,security\n")
         tokens, presets = parse_config(path)
         assert presets == {"testing": "bug,critical,security"}
         assert tokens == []
 
     def test_multiple_presets(self):
-        path = write_config("testing: bug,critical\nreading: quote\n")
+        "Proves multiple presets are all captured."
+        path = write_config("presets:\n  testing: bug,critical\n  reading: quote\n")
         _, presets = parse_config(path)
         assert presets["testing"] == "bug,critical"
         assert presets["reading"] == "quote"
 
-    def test_preset_with_spaces_around_colon(self):
-        path = write_config("testing : bug , critical\n")
-        _, presets = parse_config(path)
-        assert "testing" in presets
-
-    def test_flag_and_preset_coexist(self):
-        path = write_config("--prompt review\ntesting: bug,critical\n")
+    def test_flags_and_presets_coexist(self):
+        "Proves flag defaults and presets can appear together."
+        path = write_config("prompt: review\npresets:\n  cr: bug,critical\n")
         tokens, presets = parse_config(path)
         assert tokens == ["--prompt", "review"]
-        assert presets == {"testing": "bug,critical"}
+        assert presets == {"cr": "bug,critical"}
+
+    def test_unknown_key_warns(self, capsys):
+        "Proves unknown keys emit a warning and are ignored."
+        path = write_config("boguskey: value\n")
+        tokens, _ = parse_config(path)
+        assert tokens == []
+        assert "boguskey" in capsys.readouterr().err
+
+    def test_known_keys_do_not_warn(self, capsys):
+        "Proves well-formed config emits no warnings."
+        path = write_config("prompt: foo\nfull: false\npresets:\n  cr: bug\n")
+        parse_config(path)
+        assert capsys.readouterr().err == ""
 
 
 class TestResolveGroups:
@@ -89,17 +122,3 @@ class TestResolveGroups:
     def test_unknown_preset_exits(self):
         with pytest.raises(SystemExit):
             resolve_groups(self.ns(preset="nonexistent"), {})
-
-
-class TestMalformedConfig:
-    def test_malformed_line_prints_warning_to_stderr(self, capsys):
-        "Proves parse_config warns on lines that are not comments, flags, or presets."
-        path = write_config("this-is-not-valid\n")
-        parse_config(path)
-        assert "malformed" in capsys.readouterr().err
-
-    def test_valid_lines_do_not_warn(self, capsys):
-        "Proves parse_config emits no warnings for well-formed config files."
-        path = write_config("# comment\n--prompt foo\ntesting: bug,critical\n")
-        parse_config(path)
-        assert capsys.readouterr().err == ""

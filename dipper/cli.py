@@ -9,6 +9,7 @@ from dipper.commons.constants import BUILTIN_PRESETS
 from dipper.commons.help import print_help
 from dipper.commons.paths import AUTO_OUTPUT_SENTINEL, annotation_path, find_unannotated_files, resolve_output_path
 from dipper.view.app import run
+from dipper.view.app_types import RunArgs
 
 
 def resolve_groups(args: argparse.Namespace, presets: dict[str, str]) -> str | None:
@@ -116,13 +117,28 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_run_args(
+    args: argparse.Namespace, filename: str | None, output_path: str | None, group_names: dict[int, str]
+) -> RunArgs:
+    return RunArgs(
+        filename=filename, prompt=args.prompt, header=args.header, group_names=group_names,
+        output_lines=args.lines, output_summary=args.summary, output_json=args.json, output_full=args.full,
+        output_path=output_path, load_path=args.load,
+    )
+
+
 def iter_run_targets(
     args: argparse.Namespace, parser: argparse.ArgumentParser
 ):
     """Yield (source, filename, output_path) for each file to process."""
     if args.files:
         for fpath in find_unannotated_files(args.files):
-            yield fpath.read_text(), str(fpath), str(annotation_path(fpath))
+            try:
+                source = fpath.read_text()
+            except UnicodeDecodeError:
+                print(f"dipper: skipping binary file: {fpath}", file=sys.stderr)
+                continue
+            yield source, str(fpath), str(annotation_path(fpath))
     else:
         source, filename = read_source(args, parser)
         yield source, filename, resolve_output_path(args.output, filename)
@@ -147,9 +163,4 @@ def main() -> None:
         print("dipper: no unannotated files found", file=sys.stderr)
         return
     for source, filename, output_path in targets:
-        run(
-            source, filename,
-            prompt=args.prompt, header=args.header, group_names=group_names,
-            output_lines=args.lines, output_summary=args.summary, output_json=args.json, output_full=args.full,
-            output_path=output_path, load_path=args.load,
-        )
+        run(source, build_run_args(args, filename, output_path, group_names))

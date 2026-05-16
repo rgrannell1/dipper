@@ -19,6 +19,7 @@ from dipper.controller.actions import search as search_actions
 from dipper.controller.actions import theme as theme_actions
 from dipper.controller.output import render_json, render_output
 from dipper.model.state import AppState, LineState
+from dipper.view.app_types import RunArgs
 from dipper.view.bindings import APP_BINDINGS
 from dipper.view.providers import GroupProvider, ThemeProvider
 from dipper.view.render import status_bar_text
@@ -34,42 +35,28 @@ class ClipperApp(App):
 
     BINDINGS: ClassVar[list[Binding]] = APP_BINDINGS
 
-    def __init__(  # noqa: PLR0913, PLR0915
-        self,
-        source: str,
-        filename: str | None,
-        *,
-        prompt: str | None = None,
-        header: str | None = None,
-        group_names: dict[int, str] | None = None,
-        output_lines: bool = False,
-        output_summary: bool = False,
-        output_json: bool = False,
-        output_full: bool = False,
-        load_path: str | None = None,
-        theme: str = DEFAULT_THEME,
-    ) -> None:
+    def __init__(self, source: str, args: RunArgs) -> None:  # noqa: PLR0915
         super().__init__()
-        theme_entry = THEMES.get(theme, THEMES[DEFAULT_THEME])
+        theme_entry = THEMES.get(args.theme, THEMES[DEFAULT_THEME])
         self._model = AppState(
             lines=[LineState(text=line) for line in source.splitlines()],
-            group_names=dict(group_names or {}),
+            group_names=dict(args.group_names),
         )
-        if load_path:
-            self.apply_load(source, filename, load_path)
+        if args.load_path:
+            self.apply_load(source, args.filename, args.load_path)
         self._source = source
-        self._source_filename = filename
-        self._hi_lines = highlighted_lines(source, filename, style=theme_entry["pygments"])
-        self._filename = filename or "<stdin>"
-        self._output_filepath = filename
-        self._header = header
-        self._output_lines = output_lines
-        self._output_summary = output_summary
-        self._output_full = output_full
-        self._output_json = output_json
+        self._source_filename = args.filename
+        self._hi_lines = highlighted_lines(source, args.filename, style=theme_entry["pygments"])
+        self._filename = args.filename or "<stdin>"
+        self._output_filepath = args.filename
+        self._header = args.header
+        self._output_lines = args.output_lines
+        self._output_summary = args.output_summary
+        self._output_full = args.output_full
+        self._output_json = args.output_json
         self.register_theme(theme_entry["textual"])
         self.theme = theme_entry["textual"].name
-        self.sub_title = prompt or ""
+        self.sub_title = args.prompt or ""
 
     def apply_load(self, source: str, filename: str | None, load_path: str) -> None:
         """Restore line groups, names, and block annotations from a saved session."""
@@ -168,29 +155,11 @@ class ClipperApp(App):
         misc_actions.open_groups_overview(self)
 
 
-def run(  # noqa: PLR0913
-    source: str,
-    filename: str | None,
-    *,
-    prompt: str | None = None,
-    header: str | None = None,
-    group_names: dict[int, str] | None = None,
-    output_lines: bool = False,
-    output_summary: bool = False,
-    output_json: bool = False,
-    output_full: bool = False,
-    output_path: str | None = None,
-    load_path: str | None = None,
-    theme: str = DEFAULT_THEME,
-) -> None:
-    app = ClipperApp(
-        source, filename, prompt=prompt, header=header,
-        group_names=group_names, output_lines=output_lines, output_summary=output_summary,
-        output_json=output_json, output_full=output_full, load_path=load_path, theme=theme,
-    )
+def run(source: str, args: RunArgs) -> None:
+    app = ClipperApp(source, args)
     result = app.run()
     if result:
-        if output_path:
-            Path(output_path).write_text(result)
+        if args.output_path:
+            Path(args.output_path).write_text(result)
         else:
             print(result)

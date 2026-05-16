@@ -19,14 +19,22 @@ def gutter_text(line_num: str, highlighted: bool) -> Text:
 
 def indicator_text(group: int, anchor_group: int, is_anchor: bool) -> Text:
     if group != 0:
-        return Text("● ", style=f"bold {GROUP_COLOURS[group]}")
+        return group_dot(GROUP_COLOURS[group])
     if is_anchor:
-        return Text("◆ ", style=f"bold {GROUP_COLOURS[anchor_group]}")
+        return group_diamond(GROUP_COLOURS[anchor_group])
     return Text("  ")
 
 
 def group_dot(colour: str) -> Text:
     return Text("● ", style=Style(color=colour, bold=True))
+
+
+def group_diamond(colour: str) -> Text:
+    return Text("◆ ", style=Style(color=colour, bold=True))
+
+
+def coloured_circle_markup(colour: str, content: str) -> str:
+    return f"[{colour}]●{content}[/]"
 
 
 def search_hit_text(pattern: str, pos: int, total: int) -> Text:
@@ -70,7 +78,7 @@ def group_row_text(model: AppState, group: int) -> Text:
 
 def group_modal_title(group: int) -> str:
     colour = GROUP_COLOURS[group]
-    return f"[{colour}]●  group {group}[/]"
+    return coloured_circle_markup(colour, f"  group {group}")
 
 
 def annotation_modal_title(group: int, label: str, start_line: int = 0, end_line: int = 0) -> str:
@@ -82,7 +90,7 @@ def annotation_modal_title(group: int, label: str, start_line: int = 0, end_line
     else:
         range_str = ""
     suffix = f"  —  {range_str}" if range_str else ""
-    return f"[{colour}]● {label}{suffix}[/]"
+    return coloured_circle_markup(colour, f" {label}{suffix}")
 
 
 def group_row_item(model: AppState, grp: int) -> ListItem:

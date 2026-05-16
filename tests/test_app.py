@@ -6,12 +6,13 @@ from textual.widgets import Label
 
 from dipper.commons.constants import DIPPER_PREFIX, SEPARATOR_LINE
 from dipper.view.app import ClipperApp, LineListView
+from dipper.view.app_types import RunArgs
 
 SOURCE = "alpha\nbeta\ngamma"
 
 
 def make_app(**kwargs) -> ClipperApp:
-    return ClipperApp(SOURCE, None, **kwargs)
+    return ClipperApp(SOURCE, RunArgs(**kwargs))
 
 
 class TestInitialState:
@@ -453,7 +454,7 @@ class TestOutputPath:
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             path = tmp.name
         try:
-            app = ClipperApp(SOURCE, None)
+            app = ClipperApp(SOURCE, RunArgs())
             async with app.run_test() as pilot:
                 await pilot.press("tab")
                 await pilot.press("q")
@@ -469,7 +470,7 @@ class TestOutputPath:
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             path = tmp.name
         try:
-            app = ClipperApp(SOURCE, None)
+            app = ClipperApp(SOURCE, RunArgs())
             async with app.run_test() as pilot:
                 await pilot.press("tab")
                 await pilot.press("q")
@@ -485,7 +486,7 @@ class TestOutputPath:
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             path = tmp.name
         try:
-            app = ClipperApp(SOURCE, None)
+            app = ClipperApp(SOURCE, RunArgs())
             async with app.run_test() as pilot:
                 await pilot.press("tab")
                 await pilot.press("q")
@@ -583,7 +584,7 @@ class TestRenderedUI:
 
 class TestMetadataFilepath:
     async def test_filepath_metadata_line_present_when_filename_given(self):
-        app = ClipperApp(SOURCE, "some/file.py")
+        app = ClipperApp(SOURCE, RunArgs(filename="some/file.py"))
         async with app.run_test() as pilot:
             await pilot.press("tab")
             await pilot.press("q")
@@ -601,7 +602,7 @@ class TestMetadataFilepath:
         assert "%%dipper:meta:filepath:" not in output
 
     async def test_filepath_metadata_first_line_in_lines_mode(self):
-        app = ClipperApp(SOURCE, "src/main.py", output_lines=True)
+        app = ClipperApp(SOURCE, RunArgs(filename="src/main.py", output_lines=True))
         async with app.run_test() as pilot:
             await pilot.press("tab")
             await pilot.press("q")
@@ -610,7 +611,7 @@ class TestMetadataFilepath:
         assert output.startswith("%%dipper:meta:filepath:src/main.py%%")
 
     async def test_filepath_metadata_first_line_in_summary_mode(self):
-        app = ClipperApp(SOURCE, "src/main.py", output_summary=True)
+        app = ClipperApp(SOURCE, RunArgs(filename="src/main.py", output_summary=True))
         async with app.run_test() as pilot:
             await pilot.press("tab")
             await pilot.press("q")
