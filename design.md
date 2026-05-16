@@ -126,6 +126,73 @@ CLI flags always take precedence over values in the config file. When the same f
 
 ---
 
+## Per-block annotations
+
+### Problem
+
+A group (e.g. "bug") can contain multiple disjoint runs of lines across a file. The current model stores one `GroupAnnotation` per group number, so all runs share a single note. A reviewer marking two separate bugs as group 1 cannot record different notes for each.
+
+### Design
+
+Annotations move from group-level to block-level. A **block** is a maximal contiguous run of lines sharing the same group number. Each block is uniquely identified by `(group, start_line_idx)` — the group it belongs to and the 0-based index of its first line.
+
+**Model change**
+
+Replace `annotations: dict[int, GroupAnnotation]` with `block_annotations: dict[tuple[int, int], str]` — mapping `(group, block_start_idx)` to annotation text. Group names remain at group level in `group_names`.
+
+`set_annotation(group, block_start, text)` replaces `set_annotation(group, text)`.
+
+Helper methods on `DocumentModel`:
+
+| Method | Returns |
+|---|---|
+| `blocks(group)` | Sorted list of `(start_idx, end_idx)` for every contiguous run in that group |
+| `block_at(idx)` | `(group, block_start_idx)` for the line at `idx`, or `None` if unselected |
+| `block_annotation(group, block_start)` | Annotation text for that block, or `""` |
+
+**UX**
+
+`n` (annotate) finds the block containing the cursor line via `block_at(cursor)` and opens `AnnotationModal` for that specific block. If the cursor is not on a selected line, it falls back to the block nearest the cursor (same heuristic as `nearest_group`).
+
+The modal title shows the group name and the 1-based line range of the block:
+
+```
+● bug  —  lines 3–5
+```
+
+**Output format**
+
+The summary emits one entry per block, ordered by line number ascending (not by group). Each entry uses the existing `%%dipper:group:N:RANGES%%` line format, but `RANGES` now covers only the lines of that one block:
+
+```
+%%dipper:group:1:3-5%% bug
+Note about the first bug block
+
+%%dipper:group:1:20-22%% bug
+Note about the second bug block
+
+%%dipper:group:2:10-11%% critical
+Note about the critical block
+```
+
+This preserves the existing machine-readable pattern (`^%%dipper:[^%]+%%`) and the existing `%%dipper:group%%` grammar; consumers already tolerant of multiple entries for the same group number will work without changes.
+
+**Inline marks** are unchanged — each selected line still gets a `%%dipper:mark:N:L%%` line immediately below it.
+
+**Status bar**
+
+The status bar currently shows the annotation for the nearest group. It will instead show the annotation for the block nearest the cursor (same lookup, narrowed to block level).
+
+### Constraints
+
+- Toggling a line out of a group must remove any block annotation whose block is dissolved or split by the removal.
+- Splitting a block (by deselecting a middle line) leaves the two resulting blocks without annotations — the original annotation is not copied to either fragment.
+- Merging two annotated blocks (by selecting a gap line) discards both annotations — the merged block starts unannotated.
+- Group names are unaffected; rename still operates at group level.
+- The `--lines` output mode is unchanged (marks only, no summary).
+
+---
+
 ## `--preset <name>`
 
 `--preset` selects a named group list from the config file, expanding it as if `--groups` had been passed with that CSV. It exists so that a frequently-used group set does not need to be retyped on every invocation.

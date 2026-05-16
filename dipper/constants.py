@@ -3,9 +3,6 @@
 # Number of colour groups available to the user (1–9)
 GROUP_COUNT = 9
 
-# Key that writes annotated output to stdout and exits
-WRITE_KEY = "w"
-
 # Prefix shared by all dipper-generated output lines
 DIPPER_PREFIX = "%%dipper:"
 

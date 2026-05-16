@@ -1,0 +1,21 @@
+CommandModal {
+    background: transparent;
+    align: left bottom;
+}
+#cmd-bar {
+    height: 1;
+    width: 100%;
+    background: $panel;
+    padding: 0 1;
+}
+#cmd-prefix {
+    width: auto;
+    color: $text;
+}
+#cmd-input {
+    border: none;
+    height: 1;
+    background: $panel;
+    width: 1fr;
+    padding: 0;
+}

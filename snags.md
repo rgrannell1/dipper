@@ -24,8 +24,17 @@
 - [x] #22 `fixed` — Group commands have no discoverable prefix; typing "group" does not surface them.
 - [x] #23 `fixed` — `:` goto-line command is not discoverable; it does not appear in the command palette.
 - [x] #24 `fixed` — `>` (next match) and `<` (prev match) do not work after a `/` search.
+- [ ] #27 `open` — The annotation modal shows `COMMENT_GROUP_N` instead of the group's name (e.g. `p1`, `bug`). No test covers the modal label text.
+- [x] #26 `fixed` — There is no way to quickly assign a range of lines to a group; lines must be selected one at a time with tab.
+  - **Design:** press `f` to place a range anchor on the current line (shown with a distinct symbol); navigate to another line; press `f` again to fill all lines between the two anchors into the active group.
+- [ ] #28 `open` — Pressing digit keys (1–9) to switch the active group is flaky; the active group does not reliably change.
+- [ ] #29 `open` — Pressing digit n to set the active group does not show group n's colour indicator in the status bar unless lines are already assigned to that group; the active group is invisible until used.
+- [ ] #25 `wontfix` — `--preset priorities` only shows group 1 labelled `p1`; groups p2–p5 are missing. Could not reproduce.
 
 ## Passing
+
+- `--preset cr` — built-in code review preset loads groups bug, critical, minor, praise, question correctly.
+- `--preset priorities` — built-in priorities preset exists alongside cr.
 
 - `g` / `G` — jump to first/last line works correctly.
 - `/` search — highlights matches correctly.

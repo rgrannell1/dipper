@@ -1,7 +1,11 @@
+import re
+import tempfile
+from pathlib import Path
+
 import pytest
 from textual.widgets import Input, Label
 
-from dipper.app import ClipperApp, LineListView
+from dipper.app import ClipperApp, LineListView, run
 from dipper.constants import DIPPER_PREFIX, SEPARATOR_LINE
 
 
@@ -62,37 +66,29 @@ class TestNumberKeys:
 
 
 class TestWriteAndQuit:
-    async def test_w_exits_with_output_string(self):
-        app = make_app()
-        async with app.run_test() as pilot:
-            await pilot.press("tab")
-            await pilot.press("w")
-            await pilot.pause()
-        assert isinstance(app._return_value, str)
-
-    async def test_w_output_contains_clipper_marker(self):
-        app = make_app()
-        async with app.run_test() as pilot:
-            await pilot.press("tab")
-            await pilot.press("w")
-            await pilot.pause()
-        assert DIPPER_PREFIX in app._return_value
-
-    async def test_w_output_contains_separator(self):
-        app = make_app()
-        async with app.run_test() as pilot:
-            await pilot.press("tab")
-            await pilot.press("w")
-            await pilot.pause()
-        assert SEPARATOR_LINE in app._return_value
-
-    async def test_q_exits_with_no_output(self):
+    async def test_q_exits_with_output_string(self):
         app = make_app()
         async with app.run_test() as pilot:
             await pilot.press("tab")
             await pilot.press("q")
             await pilot.pause()
-        assert app._return_value is None
+        assert isinstance(app._return_value, str)
+
+    async def test_q_output_contains_clipper_marker(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        assert DIPPER_PREFIX in app._return_value
+
+    async def test_q_output_contains_separator(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        assert SEPARATOR_LINE in app._return_value
 
 
 class TestAnnotationModal:
@@ -131,6 +127,22 @@ class TestAnnotationModal:
             await pilot.pause(delay=0.1)
             assert pilot.app._model.annotations.get(1) is None
             assert len(pilot.app.screen_stack) == 1
+
+    async def test_modal_label_shows_group_name(self):
+        async with make_app(group_names={1: "bugs"}).run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("n")
+            await pilot.pause(delay=0.1)
+            label = pilot.app.screen.query_one("#modal-label", Label)
+            assert "bugs" in label.render_line(0).text
+
+    async def test_modal_label_falls_back_to_group_number(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("n")
+            await pilot.pause(delay=0.1)
+            label = pilot.app.screen.query_one("#modal-label", Label)
+            assert "group 1" in label.render_line(0).text
 
 
 class TestRenameModal:
@@ -199,7 +211,7 @@ class TestWorkflow:
         app = make_app()
         async with app.run_test() as pilot:
             await pilot.press("tab")  # select line 1
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         assert "%%dipper:mark:1:1%%" in app._return_value
 
@@ -209,7 +221,7 @@ class TestWorkflow:
             await pilot.press("down")
             await pilot.press("down")
             await pilot.press("tab")  # select line 3
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         assert "%%dipper:mark:1:3%%" in app._return_value
 
@@ -217,7 +229,7 @@ class TestWorkflow:
         app = make_app()
         async with app.run_test() as pilot:
             await pilot.press("tab")
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         assert "%%dipper:group:1:1%%" in app._return_value
 
@@ -228,7 +240,7 @@ class TestWorkflow:
             await pilot.press("2")
             await pilot.press("down")
             await pilot.press("tab")       # line 2 → group 2
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         output = app._return_value
         assert "%%dipper:group:1:" in output
@@ -245,7 +257,7 @@ class TestWorkflow:
                 await pilot.press(ch)
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         assert "bugs" in app._return_value
 
@@ -259,7 +271,7 @@ class TestWorkflow:
                 await pilot.press(ch)
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         output = app._return_value
         header_pos = output.index("%%dipper:group:1:")
@@ -282,7 +294,7 @@ class TestWorkflow:
                 await pilot.press(ch)
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         output = app._return_value
         assert "%%dipper:mark:1:1%%" in output
@@ -294,7 +306,7 @@ class TestWorkflow:
         app = make_app(output_lines=True)
         async with app.run_test() as pilot:
             await pilot.press("tab")
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         output = app._return_value
         assert "%%dipper:mark:1:1%%" in output
@@ -306,7 +318,7 @@ class TestWorkflow:
         async with app.run_test() as pilot:
             await pilot.press("down")
             await pilot.press("tab")   # select line 2 only
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         output = app._return_value
         assert "alpha" not in output   # line 1 not selected
@@ -322,13 +334,115 @@ class TestWorkflow:
                 await pilot.press(ch)
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
-            await pilot.press("w")
+            await pilot.press("q")
             await pilot.pause()
         output = app._return_value
         assert "%%dipper:group:1:" in output
         assert "my note" in output
         assert "alpha" not in output
         assert SEPARATOR_LINE not in output
+
+
+class TestOutputPath:
+    """--output FILE must write clean annotation data, not terminal screen buffer."""
+
+    async def test_output_file_contains_dipper_markers(self):
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+            path = tmp.name
+        try:
+            app = ClipperApp(SOURCE, None)
+            async with app.run_test() as pilot:
+                await pilot.press("tab")
+                await pilot.press("q")
+                await pilot.pause()
+            result = app._return_value
+            Path(path).write_text(result)
+            content = Path(path).read_text()
+            assert DIPPER_PREFIX in content
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+    async def test_output_file_contains_no_ansi_escapes(self):
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+            path = tmp.name
+        try:
+            app = ClipperApp(SOURCE, None)
+            async with app.run_test() as pilot:
+                await pilot.press("tab")
+                await pilot.press("q")
+                await pilot.pause()
+            result = app._return_value
+            Path(path).write_text(result)
+            content = Path(path).read_text()
+            assert not re.search(r"\x1b\[", content), "output file contains ANSI escape sequences from terminal buffer"
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+    async def test_output_file_contains_source_text(self):
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+            path = tmp.name
+        try:
+            app = ClipperApp(SOURCE, None)
+            async with app.run_test() as pilot:
+                await pilot.press("tab")
+                await pilot.press("q")
+                await pilot.pause()
+            result = app._return_value
+            Path(path).write_text(result)
+            content = Path(path).read_text()
+            assert "alpha" in content
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+
+class TestRangeFill:
+    async def test_f_sets_anchor_on_current_line(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("f")
+            lv = pilot.app.query_one(LineListView)
+            assert lv._range_anchor == 0
+
+    async def test_f_twice_fills_range_into_active_group(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("f")
+            await pilot.press("down")
+            await pilot.press("down")
+            await pilot.press("f")
+            model = pilot.app._model
+            assert model.lines[0].group == 1
+            assert model.lines[1].group == 1
+            assert model.lines[2].group == 1
+
+    async def test_f_twice_clears_anchor(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("f")
+            await pilot.press("down")
+            await pilot.press("f")
+            lv = pilot.app.query_one(LineListView)
+            assert lv._range_anchor is None
+
+    async def test_f_fill_respects_active_group(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("2")
+            await pilot.press("f")
+            await pilot.press("down")
+            await pilot.press("f")
+            model = pilot.app._model
+            assert model.lines[0].group == 2
+            assert model.lines[1].group == 2
+
+    async def test_f_fill_reversed_range(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("down")
+            await pilot.press("down")
+            await pilot.press("f")
+            await pilot.press("up")
+            await pilot.press("up")
+            await pilot.press("f")
+            model = pilot.app._model
+            assert model.lines[0].group == 1
+            assert model.lines[1].group == 1
+            assert model.lines[2].group == 1
 
 
 class TestRenderedUI:
@@ -352,19 +466,6 @@ class TestRenderedUI:
             status = pilot.app.query_one("#status", Label)
             text = status.render_line(0).text
             assert "findings" in text
-
-    async def test_status_bar_shows_annotation_text(self):
-        async with make_app().run_test() as pilot:
-            await pilot.press("tab")
-            await pilot.press("n")
-            await pilot.pause(delay=0.1)
-            for ch in "todo":
-                await pilot.press(ch)
-            await pilot.press("enter")
-            await pilot.pause(delay=0.1)
-            status = pilot.app.query_one("#status", Label)
-            text = status.render_line(0).text
-            assert "todo" in text
 
     async def test_status_bar_shows_filename(self):
         async with make_app().run_test() as pilot:

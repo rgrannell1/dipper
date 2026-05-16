@@ -11,11 +11,11 @@ from textual import events
 from rich.text import Text
 from rich.style import Style
 
-from dipper.constants import GROUP_COLOURS, WRITE_KEY
+from dipper.constants import GROUP_COLOURS
 from dipper.highlight import highlighted_lines
 from dipper.model import DocumentModel, LineState
 from dipper.output import render_output
-from dipper.widgets import AnnotationModal, CommandModal, RenameModal
+from dipper.modals import AnnotationModal, CommandModal, RenameModal
 
 
 class GroupProvider(Provider):
@@ -69,6 +69,7 @@ class LineListView(ListView):
         self._hi_lines = hi_lines
         self._gutter_width = len(str(len(hi_lines))) + 1
         self._match_indices: set[int] = set()
+        self._range_anchor: int | None = None
         items = [
             ListItem(Static(self._line_text(idx), markup=False), id=f"l{idx}")
             for idx in range(len(hi_lines))
@@ -90,6 +91,8 @@ class LineListView(ListView):
         if line.group != 0:
             colour = GROUP_COLOURS[line.group]
             indicator = Text("● ", style=f"bold {colour}")
+        elif idx == self._range_anchor:
+            indicator = Text("◆ ", style="bold cyan")
         else:
             indicator = Text("  ")
 
@@ -97,6 +100,14 @@ class LineListView(ListView):
 
     def _redraw_line(self, idx: int) -> None:
         self.query_one(f"#l{idx} Static", Static).update(self._line_text(idx))
+
+    def set_anchor(self, idx: int | None) -> None:
+        old = self._range_anchor
+        self._range_anchor = idx
+        if old is not None:
+            self._redraw_line(old)
+        if idx is not None:
+            self._redraw_line(idx)
 
     def set_matches(self, indices: set[int]) -> None:
         old = self._match_indices
@@ -111,6 +122,12 @@ class LineListView(ListView):
         self._model.toggle_line(idx)
         self._redraw_line(idx)
         self.post_message(self.LineToggled())
+
+    def on_key(self, event: events.Key) -> None:
+        ch = event.character
+        if ch is not None and ch.isdigit() and ch != "0":
+            self.app._set_group(int(ch))  # type: ignore[attr-defined]
+            event.stop()
 
     @property
     def cursor_index(self) -> int:
@@ -129,13 +146,12 @@ class ClipperApp(App):
     BINDINGS = [
         Binding("n", "annotate", "Note"),
         Binding("r", "rename_group", "Rename"),
-        Binding(WRITE_KEY, "write_output", "Write & quit"),
-        Binding("q", "quit_no_output", "Quit"),
+        Binding("f", "fill_range", "Fill range"),
+        Binding("q", "write_output", "Write & quit"),
         Binding("colon", "goto_line", "Go to line"),
         Binding("slash", "search", "Search"),
         Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
         Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
-        *[Binding(str(grp), f"set_group_{grp}", show=False, priority=True) for grp in range(1, 10)],
     ]
 
     CSS = """
@@ -202,28 +218,16 @@ class ClipperApp(App):
         used = sorted(self._model.selected_groups())
         result = Text(no_wrap=True, overflow="ellipsis")
 
-        for grp in used:
-            colour = GROUP_COLOURS[grp]
-            dot = "◉" if grp == active else "●"
-            result.append(dot, style=Style(color=colour, bold=True))
-            result.append(" ")
+        active_colour = GROUP_COLOURS[active]
+        active_label = self._model.group_label(active)
+        result.append("◉ ", style=Style(color=active_colour, bold=True))
+        result.append(active_label, style=Style(color=active_colour, bold=True))
 
-        try:
-            cursor = self._line_view().cursor_index
-        except Exception:
-            cursor = 0
-
-        nearest = self._model.nearest_group(cursor)
-        if nearest is not None:
-            colour = GROUP_COLOURS[nearest]
-            label = self._model.group_label(nearest)
+        if used:
             result.append("  |  ", style="dim")
-            result.append(label, style=Style(color=colour, bold=True))
-            annotation = self._model.annotations.get(nearest)
-            if annotation and annotation.text:
-                result.append("  ", style="dim")
-                result.append(annotation.text, style="dim")
-                result.append("  |  edit", style="dim")
+            for grp in used:
+                colour = GROUP_COLOURS[grp]
+                result.append("● ", style=Style(color=colour, bold=True))
 
         if self._search_pattern:
             if self._match_indices:
@@ -274,14 +278,27 @@ class ClipperApp(App):
             return
         group = self._model.active_group if self._model.active_group in used else min(used)
         existing = self._model.annotations[group].text if group in self._model.annotations else ""
+        label = self._model.group_label(group)
         callback = functools.partial(self._on_annotate_dismiss, group)
-        self.push_screen(AnnotationModal(group, existing), callback)
+        self.push_screen(AnnotationModal(group, label, existing), callback)
+
+    def action_fill_range(self) -> None:
+        lv = self._line_view()
+        idx = lv.cursor_index
+        if lv._range_anchor is None:
+            lv.set_anchor(idx)
+            self._refresh_status()
+        else:
+            start = min(lv._range_anchor, idx)
+            end = max(lv._range_anchor, idx)
+            for i in range(start, end + 1):
+                self._model.lines[i].group = self._model.active_group
+                lv._redraw_line(i)
+            lv.set_anchor(None)
+            self._refresh_status()
 
     def action_write_output(self) -> None:
         self.exit(render_output(self._model, lines=self._output_lines, summary=self._output_summary))
-
-    def action_quit_no_output(self) -> None:
-        self.exit(None)
 
     def _jump_to_line(self, idx: int) -> None:
         lv = self._line_view()
@@ -389,10 +406,6 @@ class ClipperApp(App):
         self._refresh_status()
 
 
-for _grp in range(1, 10):
-    setattr(ClipperApp, f"action_set_group_{_grp}", functools.partialmethod(ClipperApp._set_group, _grp))
-
-
 def run(
     source: str,
     filename: str | None,
@@ -401,8 +414,14 @@ def run(
     group_names: dict[int, str] | None = None,
     output_lines: bool = False,
     output_summary: bool = False,
+    output_path: str | None = None,
 ) -> None:
-    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names, output_lines=output_lines, output_summary=output_summary)
+    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names,
+                     output_lines=output_lines, output_summary=output_summary)
     result = app.run()
     if result:
-        print(result)
+        if output_path:
+            from pathlib import Path
+            Path(output_path).write_text(result)
+        else:
+            print(result)

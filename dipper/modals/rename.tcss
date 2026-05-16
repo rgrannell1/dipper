@@ -1,0 +1,10 @@
+RenameModal {
+    align: center middle;
+}
+RenameModal > Label {
+    margin: 1 2;
+}
+RenameModal > Input {
+    width: 60;
+    margin: 0 2 1 2;
+}

@@ -1,0 +1,10 @@
+AnnotationModal {
+    align: center middle;
+}
+AnnotationModal > Label {
+    margin: 1 2;
+}
+AnnotationModal > Input {
+    width: 60;
+    margin: 0 2 1 2;
+}

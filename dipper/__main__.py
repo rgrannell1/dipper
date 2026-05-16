@@ -41,6 +41,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--preset", metavar="NAME", default=None, help="Named group preset from config file")
     parser.add_argument("--lines", action="store_true", default=False, help="Output selected lines with marks only")
     parser.add_argument("--summary", action="store_true", default=False, help="Output group summary block only")
+    parser.add_argument("--output", metavar="FILE", default=None, help="Write output to FILE instead of stdout")
     return parser
 
 
@@ -98,7 +99,7 @@ def main() -> None:
                 group_names[idx] = name
 
     run(source, filename, prompt=args.prompt, header=args.header, group_names=group_names,
-        output_lines=args.lines, output_summary=args.summary)
+        output_lines=args.lines, output_summary=args.summary, output_path=args.output)
 
 
 if __name__ == "__main__":
