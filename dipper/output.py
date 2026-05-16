@@ -9,6 +9,7 @@ from dipper.constants import (
     UNDERLINE_MIN,
 )
 from dipper.model import DocumentModel
+from dipper.state import selected_groups
 
 
 def format_range(start: int, end: int) -> str:
@@ -61,7 +62,7 @@ def collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
 
 
 def build_summary(model: DocumentModel, group_line_numbers: dict[int, list[int]]) -> list[str]:
-    used_groups = sorted(model.selected_groups())
+    used_groups = sorted(selected_groups(model.lines))
     summary: list[str] = []
     for group in used_groups:
         annotation = model.groups.annotations.get(group)
@@ -77,7 +78,7 @@ def build_summary(model: DocumentModel, group_line_numbers: dict[int, list[int]]
 def render_full(
     model: DocumentModel, body_lines: list[str], group_line_numbers: dict[int, list[int]]
 ) -> str:
-    if not model.selected_groups():
+    if not selected_groups(model.lines):
         return "\n".join(body_lines)
     summary_block = ["", SEPARATOR_LINE, "", *build_summary(model, group_line_numbers)]
     return "\n".join(body_lines + summary_block)

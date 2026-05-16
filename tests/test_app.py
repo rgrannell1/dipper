@@ -87,8 +87,8 @@ class TestReset:
     async def test_x_clears_annotations_and_group_names(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
-            model.set_annotation(1, "note")
-            model.set_group_name(1, "bugs")
+            model.groups.set_annotation(1, "note")
+            model.groups.set_name(1, "bugs")
             await pilot.press("x")
             assert model.groups.annotations == {}
             assert model.groups.names == {}
@@ -96,14 +96,14 @@ class TestReset:
     async def test_x_clears_range_anchor(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
-            model.set_range_anchor(0)
+            model.range_fill.set_anchor(0, model.groups.active)
             await pilot.press("x")
             assert model.range_fill.anchor is None
 
     async def test_x_clears_search_state(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
-            model.set_search("alpha", [0])
+            model.search.set("alpha", [0])
             await pilot.press("x")
             assert model.search.pattern == ""
             assert model.search.indices == []
@@ -130,7 +130,7 @@ class TestGroupsOverview:
     async def test_x_in_modal_clears_focused_group_name(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
-            model.set_group_name(1, "bugs")
+            model.groups.set_name(1, "bugs")
             await pilot.press("o")
             await pilot.pause()
             await pilot.press("x")
@@ -139,8 +139,8 @@ class TestGroupsOverview:
     async def test_x_in_modal_does_not_clear_other_groups(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
-            model.set_group_name(1, "bugs")
-            model.set_group_name(2, "notes")
+            model.groups.set_name(1, "bugs")
+            model.groups.set_name(2, "notes")
             await pilot.press("o")
             await pilot.pause()
             await pilot.press("x")
@@ -300,7 +300,7 @@ class TestGroupsFlag:
     async def test_group_label_uses_prepopulated_name(self):
         async with make_app(group_names={1: "todo"}).run_test() as pilot:
             model = pilot.app._model
-            assert model.group_label(1) == "todo"
+            assert model.groups.label(1) == "todo"
 
 
 class TestWorkflow:

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 from dipper.actions.nav import cursor_group
 from dipper.modals import AnnotationModal, RenameModal
+from dipper.state import selected_groups
 
 
 def set_group(app: ClipperApp, group: int) -> None:
@@ -22,7 +23,7 @@ def set_group(app: ClipperApp, group: int) -> None:
 
 
 def rename_done(app: ClipperApp, group: int, result: str) -> None:
-    app._model.set_group_name(group, result)
+    app._model.groups.set_name(group, result)
     app.refresh_status()
 
 
@@ -35,18 +36,18 @@ def open_rename_group(app: ClipperApp) -> None:
 
 
 def annotate_done(app: ClipperApp, group: int, result: str) -> None:
-    app._model.set_annotation(group, result)
+    app._model.groups.set_annotation(group, result)
     app.refresh_status()
 
 
 def open_annotate(app: ClipperApp) -> None:
-    used = app._model.selected_groups()
+    used = selected_groups(app._model.lines)
     if not used:
         return
     # Prefer annotating the active group if it has lines; otherwise fall back to the lowest used group.
     group = app._model.active_group if app._model.active_group in used else min(used)
     annotation = app._model.groups.annotations.get(group)
     existing = annotation.text if annotation else ""
-    label = app._model.group_label(group)
+    label = app._model.groups.label(group)
     callback = functools.partial(annotate_done, app, group)
     app.push_screen(AnnotationModal(group, label, existing), callback)

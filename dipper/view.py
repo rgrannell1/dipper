@@ -8,6 +8,7 @@ from textual.widgets import ListItem, Static
 
 from dipper.constants import GROUP_COLOURS
 from dipper.model import AppState
+from dipper.state import selected_groups
 
 # --- pure render helpers ---
 
@@ -88,8 +89,8 @@ def status_bar_text(model: AppState, filename: str) -> Text:
     colour = GROUP_COLOURS[active]
     result = Text(no_wrap=True, overflow="ellipsis")
     result.append_text(group_dot(colour))
-    result.append(model.group_label(active), style=Style(color=colour, bold=True))
-    used = sorted(model.selected_groups())
+    result.append(model.groups.label(active), style=Style(color=colour, bold=True))
+    used = sorted(selected_groups(model.lines))
     if used:
         result.append("  |  ", style="dim")
         for grp in used:

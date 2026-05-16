@@ -6,9 +6,6 @@ from dipper.state import (
     LineState,
     RangeFillState,
     SearchState,
-    nearest_annotated_group,
-    nearest_group,
-    selected_groups,
 )
 
 
@@ -68,44 +65,6 @@ class AppState:
             raise ValueError(f"group must be 0 or 1-{GROUP_COUNT}, got {group}")
         self._lines[idx].group = group
 
-    def set_annotation(self, group: int, text: str) -> None:
-        self.groups.set_annotation(group, text)
-
-    def set_group_name(self, group: int, name: str) -> None:
-        self.groups.set_name(group, name)
-
-    # ── range-fill mutations ──────────────────────────────────────────────────
-
-    def set_range_anchor(self, idx: int | None) -> None:
-        if idx is not None and not (0 <= idx < len(self._lines)):
-            raise IndexError(f"anchor index {idx} out of range")
-        if idx is None:
-            self.range_fill.clear_anchor()
-        else:
-            self.range_fill.set_anchor(idx, self.groups.active)
-
-    def fill_range(self, end_idx: int) -> range:
-        """Fill from anchor to end_idx with active_group. Returns affected range. Clears anchor."""
-        if self.range_fill.anchor is None:
-            raise RuntimeError("fill_range called with no anchor set")
-        if not (0 <= end_idx < len(self._lines)):
-            raise IndexError(f"end index {end_idx} out of range")
-        return self.range_fill.fill(self._lines, end_idx, self.groups.active)
-
-    # ── search mutations ──────────────────────────────────────────────────────
-
-    def set_search(self, pattern: str, indices: list[int]) -> None:
-        self.search.set(pattern, indices)
-
-    def clear_search(self) -> None:
-        self.search.clear()
-
-    def next_match(self) -> int | None:
-        return self.search.advance()
-
-    def prev_match(self) -> int | None:
-        return self.search.retreat()
-
     # ── full reset ────────────────────────────────────────────────────────────
 
     def reset(self) -> None:
@@ -115,24 +74,6 @@ class AppState:
         self.groups.reset()
         self.search.clear()
         self.range_fill.clear_anchor()
-
-    def select_all_matches(self) -> list[int]:
-        """Assign all matched lines to active_group. Returns list of changed indices."""
-        return self.search.select_all(self._lines, self.groups.active)
-
-    # ── queries ───────────────────────────────────────────────────────────────
-
-    def selected_groups(self) -> set[int]:
-        return selected_groups(self._lines)
-
-    def group_label(self, group: int) -> str:
-        return self.groups.label(group)
-
-    def nearest_group(self, cursor: int) -> int | None:
-        return nearest_group(self._lines, cursor)
-
-    def nearest_annotated_group(self, cursor: int) -> int | None:
-        return nearest_annotated_group(self._lines, self.groups.annotations, cursor)
 
 
 # Backward-compatible alias so existing imports of DocumentModel continue to work.

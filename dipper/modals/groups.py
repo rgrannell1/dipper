@@ -39,7 +39,7 @@ class GroupsModal(ModalScreen[None]):
         return lv.index + 1
 
     def rename_done(self, group: int, name: str) -> None:
-        self._model.set_group_name(group, name)
+        self._model.groups.set_name(group, name)
         self.redraw_row(group)
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
@@ -56,6 +56,6 @@ class GroupsModal(ModalScreen[None]):
         group = self.focused_group()
         if group is None:
             return
-        self._model.set_group_name(group, "")
+        self._model.groups.set_name(group, "")
         self.redraw_row(group)
         event.stop()

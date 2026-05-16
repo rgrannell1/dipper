@@ -16,7 +16,7 @@ from dipper.widgets import LineListView
 
 def apply_clear_search(app: ClipperApp, lv: LineListView) -> None:
     old_matches = set(app._model.search.indices)
-    app._model.clear_search()
+    app._model.search.clear()
     lv.redraw_lines(old_matches)
     app.refresh_status()
 
@@ -28,7 +28,7 @@ def apply_search(app: ClipperApp, lv: LineListView, value: str) -> None:
         return
     old_matches = set(app._model.search.indices)
     indices = [idx for idx, line in enumerate(app._model.lines) if pattern.search(line.text)]
-    app._model.set_search(value, indices)
+    app._model.search.set(value, indices)
     lv.redraw_lines(old_matches.symmetric_difference(set(indices)))  # redraw only lines whose match status changed
     app.refresh_status()
     if indices:
@@ -52,21 +52,21 @@ def open_search(app: ClipperApp) -> None:
 
 
 def next_match(app: ClipperApp) -> None:
-    idx = app._model.next_match()
+    idx = app._model.search.advance()
     if idx is not None:
         jump_to_line(app, idx)
         app.refresh_status()
 
 
 def prev_match(app: ClipperApp) -> None:
-    idx = app._model.prev_match()
+    idx = app._model.search.retreat()
     if idx is not None:
         jump_to_line(app, idx)
         app.refresh_status()
 
 
 def select_all_matches(app: ClipperApp) -> None:
-    changed = app._model.select_all_matches()
+    changed = app._model.search.select_all(app._model.lines, app._model.groups.active)
     if changed:
         app.line_view().redraw_lines(changed)
         app.refresh_status()

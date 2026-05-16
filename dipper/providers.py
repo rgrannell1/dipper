@@ -10,6 +10,7 @@ from rich.text import Text
 from textual.command import Hit, Hits, Provider
 
 from dipper.constants import GROUP_COLOURS
+from dipper.state import selected_groups
 from dipper.themes import THEMES
 from dipper.view import group_dot
 
@@ -34,7 +35,7 @@ def group_score(matcher, query: str, searchable: str) -> float:
 
 def group_hit(app: ClipperApp, matcher, query: str, group: int) -> Hit | None:
     model = app._model
-    label = model.group_label(group)
+    label = model.groups.label(group)
     annotation = model.groups.annotations.get(group)
     note = annotation.text if annotation else ""
     searchable = f"group {group}: {label}  {note}"
@@ -62,7 +63,7 @@ class GroupProvider(Provider):
         app: ClipperApp = self.app  # type: ignore
         model = app._model
         matcher = self.matcher(query)
-        for group in sorted(model.selected_groups()):
+        for group in sorted(selected_groups(model.lines)):
             hit = group_hit(app, matcher, query, group)
             if hit is not None:
                 yield hit

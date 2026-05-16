@@ -13,10 +13,10 @@ def fill_range(app: ClipperApp) -> None:
     lv = app.line_view()
     idx = lv.cursor_index
     if app._model.range_fill.anchor is None:
-        app._model.set_range_anchor(idx)
+        app._model.range_fill.set_anchor(idx, app._model.groups.active)
         lv.redraw_line(idx)
         app.refresh_status()
     else:
-        affected = app._model.fill_range(idx)
+        affected = app._model.range_fill.fill(app._model.lines, idx, app._model.groups.active)
         lv.redraw_lines(affected)
         app.refresh_status()

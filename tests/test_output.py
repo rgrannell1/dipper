@@ -102,13 +102,13 @@ class TestAnnotations:
     def test_annotation_text_in_summary(self):
         model = make_model("code")
         select(model, 0)
-        model.set_annotation(1, "this is important")
+        model.groups.set_annotation(1, "this is important")
         assert "this is important" in render_output(model)
 
     def test_annotation_after_group_header(self):
         model = make_model("code")
         select(model, 0)
-        model.set_annotation(1, "my note")
+        model.groups.set_annotation(1, "my note")
         lines = render_output(model).splitlines()
         header_idx = next(idx for idx, ln in enumerate(lines) if "%%dipper:group:1:" in ln)
         assert lines[header_idx + 1] == "my note"
@@ -175,8 +175,8 @@ class TestMultipleGroups:
         model = make_model("a", "b")
         select(model, 0, group=1)
         select(model, 1, group=2)
-        model.set_annotation(1, "note one")
-        model.set_annotation(2, "note two")
+        model.groups.set_annotation(1, "note one")
+        model.groups.set_annotation(2, "note two")
         out = render_output(model)
         assert "note one" in out
         assert "note two" in out
@@ -245,7 +245,7 @@ class TestSummaryFlag:
     def test_only_group_headers_and_annotations(self):
         model = make_model("a", "b")
         select(model, 0)
-        model.set_annotation(1, "found it")
+        model.groups.set_annotation(1, "found it")
         out = render_output(model, summary=True)
         assert "%%dipper:group:1:" in out
         assert "found it" in out
@@ -271,7 +271,7 @@ class TestLinesPlusSummary:
     def test_selected_lines_and_summary_both_present(self):
         model = make_model("a", "b", "c")
         select(model, 1)
-        model.set_annotation(1, "note")
+        model.groups.set_annotation(1, "note")
         out = render_output(model, lines=True, summary=True)
         assert "b" in out
         assert "%%dipper:mark:1:2%%" in out
@@ -298,7 +298,7 @@ class TestMarkerPattern:
         model = make_model("alpha", "beta")
         select(model, 0, group=1)
         select(model, 1, group=2)
-        model.set_annotation(1, "ann")
+        model.groups.set_annotation(1, "ann")
         for line in render_output(model).splitlines():
             if line.startswith("%%"):
                 assert pattern.match(line), f"Bad marker line: {line!r}"
