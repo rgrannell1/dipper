@@ -70,6 +70,7 @@ class LineListView(ListView):
         self._gutter_width = len(str(len(hi_lines))) + 1
         self._match_indices: set[int] = set()
         self._range_anchor: int | None = None
+        self._range_anchor_group: int = 1
         items = [
             ListItem(Static(self._line_text(idx), markup=False), id=f"l{idx}")
             for idx in range(len(hi_lines))
@@ -92,7 +93,8 @@ class LineListView(ListView):
             colour = GROUP_COLOURS[line.group]
             indicator = Text("● ", style=f"bold {colour}")
         elif idx == self._range_anchor:
-            indicator = Text("◆ ", style="bold cyan")
+            colour = GROUP_COLOURS[self._range_anchor_group]
+            indicator = Text("◆ ", style=f"bold {colour}")
         else:
             indicator = Text("  ")
 
@@ -101,9 +103,10 @@ class LineListView(ListView):
     def _redraw_line(self, idx: int) -> None:
         self.query_one(f"#l{idx} Static", Static).update(self._line_text(idx))
 
-    def set_anchor(self, idx: int | None) -> None:
+    def set_anchor(self, idx: int | None, group: int = 1) -> None:
         old = self._range_anchor
         self._range_anchor = idx
+        self._range_anchor_group = group
         if old is not None:
             self._redraw_line(old)
         if idx is not None:
@@ -286,7 +289,7 @@ class ClipperApp(App):
         lv = self._line_view()
         idx = lv.cursor_index
         if lv._range_anchor is None:
-            lv.set_anchor(idx)
+            lv.set_anchor(idx, self._model.active_group)
             self._refresh_status()
         else:
             start = min(lv._range_anchor, idx)
@@ -403,6 +406,7 @@ class ClipperApp(App):
 
     def _set_group(self, group: int) -> None:
         self._model.active_group = group
+        self._line_view().set_anchor(None)
         self._refresh_status()
 
 

@@ -444,6 +444,13 @@ class TestRangeFill:
             assert model.lines[1].group == 1
             assert model.lines[2].group == 1
 
+    async def test_switching_group_clears_anchor(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("f")
+            await pilot.press("2")
+            lv = pilot.app.query_one(LineListView)
+            assert lv._range_anchor is None
+
 
 class TestRenderedUI:
     async def test_status_bar_shows_dot_after_selection(self):
