@@ -4,6 +4,7 @@ from pygments import highlight
 from pygments.formatters import TerminalTrueColorFormatter
 from pygments.lexers import get_lexer_by_name, guess_lexer
 from pygments.lexers import get_lexer_for_filename
+from pygments.style import Style
 from pygments.util import ClassNotFound
 
 
@@ -19,10 +20,12 @@ def choose_lexer(source: str, filename: str | None):
         return get_lexer_by_name("text")
 
 
-def highlighted_lines(source: str, filename: str | None = None) -> list[str]:
+def highlighted_lines(source: str, filename: str | None = None, style: type[Style] | None = None) -> list[str]:
     """Return source split into lines with ANSI colour codes applied."""
+    from dipper.themes import THEMES, DEFAULT_THEME
+    resolved_style = style or THEMES[DEFAULT_THEME]["pygments"]
     lexer = choose_lexer(source, filename)
-    formatter = TerminalTrueColorFormatter(style="monokai")
+    formatter = TerminalTrueColorFormatter(style=resolved_style)
     rendered = highlight(source, lexer, formatter)
     # Strip trailing newline that pygments always appends
     lines = rendered.splitlines()

@@ -173,6 +173,34 @@ class GroupProvider(Provider):
             )
 
 
+def theme_display(name: str, primary: str) -> Text:
+    result = Text()
+    result.append("◉ ", style=f"bold {primary}")
+    result.append(name, style=Style(color=primary, bold=True))
+    return result
+
+
+class ThemeProvider(Provider):
+    """Command palette provider listing all available colour themes."""
+
+    async def search(self, query: str) -> Hits:
+        from dipper.themes import THEMES
+        app: ClipperApp = self.app  # type: ignore
+        matcher = self.matcher(query)
+
+        for name, entry in THEMES.items():
+            searchable = f"Theme - {name}"
+            score = matcher.match(searchable) if query else 1.0
+            if score == 0:
+                continue
+            primary = entry["textual"].primary
+            yield Hit(
+                score=score,
+                match_display=theme_display(searchable, primary),
+                command=functools.partial(app.change_theme, name),
+            )
+
+
 # --- main list widget ---
 
 

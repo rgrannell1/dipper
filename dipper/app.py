@@ -9,7 +9,8 @@ from dipper.highlight import highlighted_lines
 from dipper.model import AppState
 from dipper.state import LineState
 from dipper.output import render_output
-from dipper.view import GroupProvider, LineListView, status_bar_text
+from dipper.themes import THEMES, DEFAULT_THEME
+from dipper.view import GroupProvider, LineListView, ThemeProvider, status_bar_text
 from dipper import actions
 
 
@@ -17,7 +18,7 @@ class ClipperApp(App):
     """File annotation TUI."""
 
     TITLE = "dipper"
-    COMMANDS = {GroupProvider}
+    COMMANDS = {GroupProvider, ThemeProvider}
     CSS_PATH = "app.tcss"
 
     BINDINGS = [
@@ -29,7 +30,7 @@ class ClipperApp(App):
         Binding("slash", "search", "Search"),
         Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
         Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
-        Binding("x", "reset", "Reset", show=False),
+        Binding("x", "reset", "Reset"),
         Binding("o", "groups_overview", "Groups"),
     ]
 
@@ -42,19 +43,25 @@ class ClipperApp(App):
         group_names: dict[int, str] | None = None,
         output_lines: bool = False,
         output_summary: bool = False,
+        theme: str = DEFAULT_THEME,
     ) -> None:
         super().__init__()
+        theme_entry = THEMES.get(theme, THEMES[DEFAULT_THEME])
         lines = source.splitlines()
         self._model = AppState(
             lines=[LineState(text=line) for line in lines],
             group_names=dict(group_names or {}),
         )
-        self._hi_lines = highlighted_lines(source, filename)
+        self._source = source
+        self._source_filename = filename
+        self._hi_lines = highlighted_lines(source, filename, style=theme_entry["pygments"])
         self._filename = filename or "<stdin>"
         self._output_filepath = filename
         self._header = header
         self._output_lines = output_lines
         self._output_summary = output_summary
+        self.register_theme(theme_entry["textual"])
+        self.theme = theme_entry["textual"].name
         if prompt is not None:
             self.sub_title = prompt
 
@@ -80,6 +87,9 @@ class ClipperApp(App):
 
     def noop(self) -> None:
         pass
+
+    def change_theme(self, theme_name: str) -> None:
+        actions.change_theme(self, theme_name)
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         self.refresh_status()
@@ -143,10 +153,12 @@ def run(
     output_lines: bool = False,
     output_summary: bool = False,
     output_path: str | None = None,
+    theme: str = DEFAULT_THEME,
 ) -> None:
     app = ClipperApp(
         source, filename, prompt=prompt, header=header,
         group_names=group_names, output_lines=output_lines, output_summary=output_summary,
+        theme=theme,
     )
     result = app.run()
     if result:

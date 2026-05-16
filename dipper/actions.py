@@ -160,3 +160,15 @@ def reset(app: ClipperApp) -> None:
 
 def open_groups_overview(app: ClipperApp) -> None:
     app.push_screen(GroupsModal(app._model), lambda _: app.refresh_status())
+
+
+def change_theme(app: ClipperApp, theme_name: str) -> None:
+    from dipper.themes import THEMES, DEFAULT_THEME
+    from dipper.highlight import highlighted_lines
+    entry = THEMES.get(theme_name, THEMES[DEFAULT_THEME])
+    new_hi_lines = highlighted_lines(app._source, app._source_filename, style=entry["pygments"])
+    app._hi_lines = new_hi_lines
+    app.line_view()._hi_lines = new_hi_lines  # sync the view's reference
+    app.register_theme(entry["textual"])
+    app.theme = entry["textual"].name
+    app.line_view().redraw_lines(range(len(app._model.lines)))
