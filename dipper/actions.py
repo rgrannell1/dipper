@@ -25,7 +25,8 @@ def cursor_group(app: ClipperApp) -> int:
         idx = app.line_view().cursor_index
     except Exception:
         return 0
-    return app._model.lines[idx].group if idx < len(app._model.lines) else 0
+    lines = app._model.lines
+    return lines[idx].group if idx < len(lines) else 0
 
 
 def set_group(app: ClipperApp, group: int) -> None:
@@ -61,7 +62,8 @@ def open_annotate(app: ClipperApp) -> None:
         return
     # Prefer annotating the active group if it has lines; otherwise fall back to the lowest used group.
     group = app._model.active_group if app._model.active_group in used else min(used)
-    existing = app._model.annotations[group].text if group in app._model.annotations else ""
+    annotation = app._model.annotations.get(group)
+    existing = annotation.text if annotation else ""
     label = app._model.group_label(group)
     callback = functools.partial(annotate_done, app, group)
     app.push_screen(AnnotationModal(group, label, existing), callback)
@@ -86,8 +88,9 @@ def open_goto_line(app: ClipperApp) -> None:
         if value is None:
             return
         try:
-            n = int(value.strip())
-            idx = max(0, min(n - 1, len(app._model.lines) - 1))
+            line_num = int(value.strip())
+            last = len(app._model.lines) - 1
+            idx = max(0, min(line_num - 1, last))
             jump_to_line(app, idx)
         except ValueError:
             pass
@@ -127,7 +130,8 @@ def search_result(app: ClipperApp, value: str | None) -> None:
 
 
 def open_search(app: ClipperApp) -> None:
-    app.push_screen(CommandModal("/"), functools.partial(search_result, app))
+    callback = functools.partial(search_result, app)
+    app.push_screen(CommandModal("/"), callback)
 
 
 def next_match(app: ClipperApp) -> None:
@@ -154,7 +158,8 @@ def select_all_matches(app: ClipperApp) -> None:
 def reset(app: ClipperApp) -> None:
     app._model.reset()
     lv = app.line_view()
-    lv.redraw_lines(range(len(app._model.lines)))
+    line_count = len(app._model.lines)
+    lv.redraw_lines(range(line_count))
     app.refresh_status()
 
 
@@ -168,7 +173,9 @@ def change_theme(app: ClipperApp, theme_name: str) -> None:
     entry = THEMES.get(theme_name, THEMES[DEFAULT_THEME])
     new_hi_lines = highlighted_lines(app._source, app._source_filename, style=entry["pygments"])
     app._hi_lines = new_hi_lines
-    app.line_view()._hi_lines = new_hi_lines  # sync the view's reference
+    lv = app.line_view()
+    lv._hi_lines = new_hi_lines  # sync the view's reference
     app.register_theme(entry["textual"])
     app.theme = entry["textual"].name
-    app.line_view().redraw_lines(range(len(app._model.lines)))
+    line_count = len(app._model.lines)
+    lv.redraw_lines(range(line_count))

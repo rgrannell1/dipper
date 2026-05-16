@@ -218,10 +218,10 @@ class LineListView(ListView):
         self._model = model
         self._hi_lines = hi_lines
         self._gutter_width = len(str(len(hi_lines))) + 1
-        items = [
-            ListItem(Static(self.line_text(idx), markup=False), id=f"l{idx}")
-            for idx in range(len(hi_lines))
-        ]
+        items = []
+        for idx in range(len(hi_lines)):
+            static = Static(self.line_text(idx), markup=False)
+            items.append(ListItem(static, id=f"l{idx}"))
         super().__init__(*items)
 
     def gutter(self, idx: int) -> Text:
@@ -241,7 +241,9 @@ class LineListView(ListView):
         hi_text = Text.from_ansi(self._hi_lines[idx])
         if line.group != 0:
             hi_text.stylize(f"bold {GROUP_COLOURS[line.group]}")
-        return Text.assemble(self.gutter(idx), self.indicator(idx, line.group), hi_text)
+        gutter = self.gutter(idx)
+        indicator = self.indicator(idx, line.group)
+        return Text.assemble(gutter, indicator, hi_text)
 
     def redraw_line(self, idx: int) -> None:
         """Re-render a single list item from current model state."""

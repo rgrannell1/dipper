@@ -103,7 +103,8 @@ class ClipperApp(App):
             actions.jump_to_line(self, 0)
             event.stop()
         elif ch == "G":
-            actions.jump_to_line(self, len(self._model.lines) - 1)
+            last_idx = len(self._model.lines) - 1
+            actions.jump_to_line(self, last_idx)
             event.stop()
         elif ch == "*":
             actions.select_all_matches(self)
