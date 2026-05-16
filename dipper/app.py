@@ -12,9 +12,11 @@ from dipper import actions
 from dipper.highlight import highlighted_lines
 from dipper.model import AppState
 from dipper.output import render_output
+from dipper.providers import GroupProvider, ThemeProvider
 from dipper.state import LineState
 from dipper.themes import DEFAULT_THEME, THEMES
-from dipper.view import GroupProvider, LineListView, ThemeProvider, status_bar_text
+from dipper.view import status_bar_text
+from dipper.widgets import LineListView
 
 
 class ClipperApp(App):

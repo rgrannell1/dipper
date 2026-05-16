@@ -14,7 +14,7 @@ from textual.css.query import NoMatches
 from dipper.highlight import highlighted_lines
 from dipper.modals import AnnotationModal, CommandModal, GroupsModal, RenameModal
 from dipper.themes import DEFAULT_THEME, THEMES
-from dipper.view import LineListView
+from dipper.widgets import LineListView
 
 
 def jump_to_line(app: ClipperApp, idx: int) -> None:
