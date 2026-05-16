@@ -112,7 +112,7 @@ Dipper ships with the following built-in presets that are available without any 
 | Preset | Groups |
 |---|---|
 | `priorities` | `p1,p2,p3,p4,p5` |
-| `cr` | `bug,critical,minor,praise,question` |
+| `cr` | `bug,critical,minor,praise,question,note` |
 
 User-defined presets in the config file take precedence over built-in presets with the same name.
 

@@ -47,7 +47,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 BUILTIN_PRESETS: dict[str, str] = {
     "priorities": "p1,p2,p3,p4,p5",
-    "cr": "bug,critical,minor,praise,question",
+    "cr": "bug,critical,minor,praise,question,note",
 }
 
 
