@@ -24,6 +24,12 @@ GROUP_FORMAT = "%%dipper:group:{group}:{ranges}%%"
 # Metadata line emitted as the first line of output when a source filepath is known
 META_FILEPATH_FORMAT = "%%dipper:meta:filepath:{filepath}%%"
 
+# Named group presets built into dipper (user config can add more or override)
+BUILTIN_PRESETS: dict[str, str] = {
+    "priorities": "p1,p2,p3,p4,p5",
+    "cr": "bug,critical,minor,praise,question,note",
+}
+
 # Colours for groups 1-9, indexed by group number (1-based, index 0 unused)
 GROUP_COLOURS = [
     "",          # placeholder, groups are 1-based
