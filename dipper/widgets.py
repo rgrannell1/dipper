@@ -48,13 +48,13 @@ class LineListView(ListView):
     def gutter(self, idx: int) -> Text:
         """Line number gutter, highlighted yellow when the line is a search match."""
         line_num = str(idx + 1).rjust(self._gutter_width)
-        highlighted = idx in set(self._model.match_indices)
+        highlighted = idx in set(self._model.search.indices)
         return gutter_text(line_num, highlighted)
 
     def indicator(self, idx: int, group: int) -> Text:
         """Coloured dot showing group membership, or anchor diamond when range-fill is pending."""
-        is_anchor = idx == self._model.range_anchor
-        return indicator_text(group, self._model.range_anchor_group, is_anchor)
+        is_anchor = idx == self._model.range_fill.anchor
+        return indicator_text(group, self._model.range_fill.anchor_group, is_anchor)
 
     def line_text(self, idx: int) -> Text:
         """Full rendered line: gutter + indicator + syntax-highlighted source text."""

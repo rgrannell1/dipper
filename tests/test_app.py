@@ -90,23 +90,23 @@ class TestReset:
             model.set_annotation(1, "note")
             model.set_group_name(1, "bugs")
             await pilot.press("x")
-            assert model.annotations == {}
-            assert model.group_names == {}
+            assert model.groups.annotations == {}
+            assert model.groups.names == {}
 
     async def test_x_clears_range_anchor(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
             model.set_range_anchor(0)
             await pilot.press("x")
-            assert model.range_anchor is None
+            assert model.range_fill.anchor is None
 
     async def test_x_clears_search_state(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
             model.set_search("alpha", [0])
             await pilot.press("x")
-            assert model.search_pattern == ""
-            assert model.match_indices == []
+            assert model.search.pattern == ""
+            assert model.search.indices == []
 
 
 class TestGroupsOverview:
@@ -134,7 +134,7 @@ class TestGroupsOverview:
             await pilot.press("o")
             await pilot.pause()
             await pilot.press("x")
-            assert model.group_names.get(1, "") == ""
+            assert model.groups.names.get(1, "") == ""
 
     async def test_x_in_modal_does_not_clear_other_groups(self):
         async with make_app().run_test() as pilot:
@@ -144,7 +144,7 @@ class TestGroupsOverview:
             await pilot.press("o")
             await pilot.pause()
             await pilot.press("x")
-            assert model.group_names.get(2, "") == "notes"
+            assert model.groups.names.get(2, "") == "notes"
 
     async def test_escape_closes_modal(self):
         from dipper.modals.groups import GroupsModal
@@ -206,7 +206,7 @@ class TestAnnotationModal:
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
             model = pilot.app._model
-            ann = model.annotations.get(1)
+            ann = model.groups.annotations.get(1)
             assert ann is not None
             assert ann.text == "important fix"
 
@@ -218,7 +218,7 @@ class TestAnnotationModal:
             await pilot.press("escape")
             await pilot.pause(delay=0.1)
             model = pilot.app._model
-            assert model.annotations.get(1) is None
+            assert model.groups.annotations.get(1) is None
             assert len(pilot.app.screen_stack) == 1
 
     async def test_modal_label_shows_group_name(self):
@@ -255,7 +255,7 @@ class TestRenameModal:
                 await pilot.press(ch)
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
-            group_names = pilot.app._model.group_names
+            group_names = pilot.app._model.groups.names
             assert group_names.get(1) == "bugs"
 
     async def test_rename_escape_leaves_name_unchanged(self):
@@ -265,7 +265,7 @@ class TestRenameModal:
             await pilot.pause(delay=0.1)
             await pilot.press("escape")
             await pilot.pause(delay=0.1)
-            group_names = pilot.app._model.group_names
+            group_names = pilot.app._model.groups.names
             assert group_names.get(1) is None
 
 
@@ -293,7 +293,7 @@ class TestHeaderFlag:
 class TestGroupsFlag:
     async def test_groups_prepopulate_names(self):
         async with make_app(group_names={1: "bugs", 2: "features"}).run_test() as pilot:
-            group_names = pilot.app._model.group_names
+            group_names = pilot.app._model.groups.names
             assert group_names[1] == "bugs"
             assert group_names[2] == "features"
 
@@ -496,7 +496,7 @@ class TestRangeFill:
     async def test_f_sets_anchor_on_current_line(self):
         async with make_app().run_test() as pilot:
             await pilot.press("f")
-            assert pilot.app._model.range_anchor == 0
+            assert pilot.app._model.range_fill.anchor == 0
 
     async def test_f_twice_fills_range_into_active_group(self):
         async with make_app().run_test() as pilot:
@@ -514,7 +514,7 @@ class TestRangeFill:
             await pilot.press("f")
             await pilot.press("down")
             await pilot.press("f")
-            assert pilot.app._model.range_anchor is None
+            assert pilot.app._model.range_fill.anchor is None
 
     async def test_f_fill_respects_active_group(self):
         async with make_app().run_test() as pilot:
@@ -543,7 +543,7 @@ class TestRangeFill:
         async with make_app().run_test() as pilot:
             await pilot.press("f")
             await pilot.press("2")
-            assert pilot.app._model.range_anchor is None
+            assert pilot.app._model.range_fill.anchor is None
 
 
 class TestRenderedUI:

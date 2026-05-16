@@ -49,7 +49,7 @@ class GroupProvider(Provider):
 
         for group in sorted(model.selected_groups()):
             label = model.group_label(group)
-            annotation = model.annotations.get(group)
+            annotation = model.groups.annotations.get(group)
             note = annotation.text if annotation else ""
 
             searchable = f"group {group}: {label}  {note}"

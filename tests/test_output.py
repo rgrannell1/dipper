@@ -141,7 +141,7 @@ class TestGroupHeader:
     def test_named_group_in_header(self):
         model = make_model("code")
         select(model, 0)
-        model.group_names[1] = "bugs"
+        model.groups.names[1] = "bugs"
         out = render_output(model)
         assert "%%dipper:group:1:1%% bugs" in out
 

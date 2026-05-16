@@ -62,7 +62,7 @@ class TestGroupLabel:
 
     def test_named_group_label(self):
         model = make_model("a")
-        model.group_names[1] = "bugs"
+        model.groups.names[1] = "bugs"
         assert model.group_label(1) == "bugs"
 
 

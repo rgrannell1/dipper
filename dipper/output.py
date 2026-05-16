@@ -64,9 +64,9 @@ def build_summary(model: DocumentModel, group_line_numbers: dict[int, list[int]]
     used_groups = sorted(model.selected_groups())
     summary: list[str] = []
     for group in used_groups:
-        annotation = model.annotations.get(group)
+        annotation = model.groups.annotations.get(group)
         annotation_text = annotation.text if annotation else ""
-        name = model.group_names.get(group)
+        name = model.groups.names.get(group)
         ranges = encode_ranges(group_line_numbers.get(group, []))
         summary.append(group_header(group, name, ranges))
         summary.append(annotation_text)

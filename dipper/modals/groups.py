@@ -46,7 +46,7 @@ class GroupsModal(ModalScreen[None]):
         group = self.focused_group()
         if group is None:
             return
-        existing = self._model.group_names.get(group, "")
+        existing = self._model.groups.names.get(group, "")
         callback = functools.partial(self.rename_done, group)
         self.app.push_screen(RenameModal(group, existing), callback)
 

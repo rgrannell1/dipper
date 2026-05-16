@@ -2,7 +2,6 @@
 
 from dipper.constants import GROUP_COUNT
 from dipper.state import (
-    GroupAnnotation,
     GroupState,
     LineState,
     RangeFillState,
@@ -42,36 +41,6 @@ class AppState:
     @property
     def lines(self) -> list[LineState]:
         return self._lines
-
-    # ── backward-compat delegate properties ──────────────────────────────────
-
-    @property
-    def annotations(self) -> dict[int, GroupAnnotation]:
-        return self.groups.annotations
-
-    @property
-    def group_names(self) -> dict[int, str]:
-        return self.groups.names
-
-    @property
-    def search_pattern(self) -> str:
-        return self.search.pattern
-
-    @property
-    def match_indices(self) -> list[int]:
-        return self.search.indices
-
-    @property
-    def match_cursor(self) -> int:
-        return self.search.cursor
-
-    @property
-    def range_anchor(self) -> int | None:
-        return self.range_fill.anchor
-
-    @property
-    def range_anchor_group(self) -> int:
-        return self.range_fill.anchor_group
 
     # ── active_group: validated, clears range anchor on change ───────────────
 

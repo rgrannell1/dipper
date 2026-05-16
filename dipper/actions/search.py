@@ -15,7 +15,7 @@ from dipper.widgets import LineListView
 
 
 def apply_clear_search(app: ClipperApp, lv: LineListView) -> None:
-    old_matches = set(app._model.match_indices)
+    old_matches = set(app._model.search.indices)
     app._model.clear_search()
     lv.redraw_lines(old_matches)
     app.refresh_status()
@@ -26,7 +26,7 @@ def apply_search(app: ClipperApp, lv: LineListView, value: str) -> None:
         pattern = regex_module.compile(value, regex_module.IGNORECASE)
     except regex_module.error:
         return
-    old_matches = set(app._model.match_indices)
+    old_matches = set(app._model.search.indices)
     indices = [idx for idx, line in enumerate(app._model.lines) if pattern.search(line.text)]
     app._model.set_search(value, indices)
     lv.redraw_lines(old_matches.symmetric_difference(set(indices)))  # redraw only lines whose match status changed

@@ -13,7 +13,7 @@ from dipper.modals import AnnotationModal, RenameModal
 
 
 def set_group(app: ClipperApp, group: int) -> None:
-    old_anchor = app._model.range_anchor
+    old_anchor = app._model.range_fill.anchor
     app._model.active_group = group
     lv = app.line_view()
     if old_anchor is not None:
@@ -29,7 +29,7 @@ def rename_done(app: ClipperApp, group: int, result: str) -> None:
 def open_rename_group(app: ClipperApp) -> None:
     """Prefer the group under the cursor; fall back to active_group when cursor is on an unassigned line."""
     grp = cursor_group(app) or app._model.active_group
-    existing = app._model.group_names.get(grp, "")
+    existing = app._model.groups.names.get(grp, "")
     callback = functools.partial(rename_done, app, grp)
     app.push_screen(RenameModal(grp, existing), callback)
 
@@ -45,7 +45,7 @@ def open_annotate(app: ClipperApp) -> None:
         return
     # Prefer annotating the active group if it has lines; otherwise fall back to the lowest used group.
     group = app._model.active_group if app._model.active_group in used else min(used)
-    annotation = app._model.annotations.get(group)
+    annotation = app._model.groups.annotations.get(group)
     existing = annotation.text if annotation else ""
     label = app._model.group_label(group)
     callback = functools.partial(annotate_done, app, group)

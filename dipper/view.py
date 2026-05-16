@@ -47,7 +47,7 @@ def group_line_count_text(count: int) -> Text:
 def group_row_text(model: AppState, group: int) -> Text:
     colour = GROUP_COLOURS[group]
     count = sum(1 for line in model.lines if line.group == group)
-    name = model.group_names.get(group, "")
+    name = model.groups.names.get(group, "")
     result = Text()
     result.append_text(group_dot(colour))
     result.append_text(group_name_text(group, name))
@@ -70,13 +70,13 @@ def group_row_item(model: AppState, grp: int) -> ListItem:
 
 
 def search_section_text(model: AppState) -> Text:
-    pattern = model.search_pattern
+    pattern = model.search.pattern
     result = Text()
     if not pattern:
         return result
-    if model.match_indices:
-        pos = model.match_cursor + 1
-        total = len(model.match_indices)
+    if model.search.indices:
+        pos = model.search.cursor + 1
+        total = len(model.search.indices)
         result.append_text(search_hit_text(pattern, pos, total))
     else:
         result.append_text(search_miss_text(pattern))

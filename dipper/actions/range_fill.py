@@ -12,7 +12,7 @@ def fill_range(app: ClipperApp) -> None:
     """First press sets the anchor; second press fills from anchor to cursor and clears it."""
     lv = app.line_view()
     idx = lv.cursor_index
-    if app._model.range_anchor is None:
+    if app._model.range_fill.anchor is None:
         app._model.set_range_anchor(idx)
         lv.redraw_line(idx)
         app.refresh_status()
