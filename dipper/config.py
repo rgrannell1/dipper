@@ -1,7 +1,8 @@
-# Config file discovery and parsing
+"""Config file discovery and parsing."""
 
 import os
 import shlex
+import sys
 from pathlib import Path
 
 
@@ -24,6 +25,8 @@ def parse_config(path: Path) -> tuple[list[str], dict[str, str]]:
         if ":" in stripped and not stripped.startswith("--"):
             name, _, csv = stripped.partition(":")
             presets[name.strip()] = csv.strip()
-        else:
+        elif stripped.startswith("--"):
             flag_tokens.extend(shlex.split(stripped))
+        else:
+            print(f"dipper: config warning: malformed line ignored: {stripped!r}", file=sys.stderr)
     return flag_tokens, presets
