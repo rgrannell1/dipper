@@ -1,7 +1,8 @@
+import json
 import re
 
 from dipper.commons.constants import DIPPER_PREFIX, SEPARATOR_LINE, UNDERLINE_MIN
-from dipper.controller.output import encode_ranges, render_output
+from dipper.controller.output import encode_ranges, render_json, render_output
 from dipper.model.state import DocumentModel, LineState
 
 
@@ -101,13 +102,13 @@ class TestAnnotations:
     def test_annotation_text_in_summary(self):
         model = make_model("code")
         select(model, 0)
-        model.groups.set_annotation(1, "this is important")
+        model.groups.set_annotation(1, 0, "this is important")
         assert "this is important" in render_output(model)
 
     def test_annotation_after_group_header(self):
         model = make_model("code")
         select(model, 0)
-        model.groups.set_annotation(1, "my note")
+        model.groups.set_annotation(1, 0, "my note")
         lines = render_output(model).splitlines()
         header_idx = next(idx for idx, ln in enumerate(lines) if "%%dipper:group:1:" in ln)
         assert lines[header_idx + 1] == "my note"
@@ -126,8 +127,9 @@ class TestGroupHeader:
         select(model, 0)
         select(model, 2)
         out = render_output(model)
-        # lines 1 and 3 selected — should appear as "1,3" in group header
-        assert "%%dipper:group:1:1,3%%" in out
+        # lines 1 and 3 are each a separate block; each gets its own header
+        assert "%%dipper:group:1:1%%" in out
+        assert "%%dipper:group:1:3%%" in out
 
     def test_contiguous_lines_encoded_as_range(self):
         model = make_model("a", "b", "c")
@@ -161,7 +163,8 @@ class TestMultipleGroups:
         assert "%%dipper:group:1:" in out
         assert "%%dipper:group:2:" in out
 
-    def test_groups_in_sorted_order(self):
+    def test_groups_sorted_by_start_line(self):
+        "Proves blocks are emitted in ascending line-number order."
         model = make_model("a", "b", "c")
         select(model, 2, group=3)
         select(model, 0, group=1)
@@ -174,8 +177,8 @@ class TestMultipleGroups:
         model = make_model("a", "b")
         select(model, 0, group=1)
         select(model, 1, group=2)
-        model.groups.set_annotation(1, "note one")
-        model.groups.set_annotation(2, "note two")
+        model.groups.set_annotation(1, 0, "note one")
+        model.groups.set_annotation(2, 1, "note two")
         out = render_output(model)
         assert "note one" in out
         assert "note two" in out
@@ -187,6 +190,44 @@ class TestMultipleGroups:
         out = render_output(model)
         assert "%%dipper:group:1:1%%" in out
         assert "%%dipper:group:2:3%%" in out
+
+
+class TestPerBlockSummary:
+    def test_two_disjoint_blocks_get_separate_headers(self):
+        "Proves that two separate blocks in the same group each get their own header."
+        model = make_model("a", "b", "c", "d", "e")
+        select(model, 0)
+        select(model, 2)
+        select(model, 4)
+        out = render_output(model)
+        assert "%%dipper:group:1:1%%" in out
+        assert "%%dipper:group:1:3%%" in out
+        assert "%%dipper:group:1:5%%" in out
+
+    def test_block_annotations_emitted_per_block(self):
+        "Proves each block's annotation is emitted under its own header."
+        model = make_model("a", "b", "c")
+        select(model, 0)
+        select(model, 2)
+        model.groups.set_annotation(1, 0, "first block note")
+        model.groups.set_annotation(1, 2, "second block note")
+        out = render_output(model)
+        assert "first block note" in out
+        assert "second block note" in out
+
+    def test_blocks_ordered_by_line_number_ascending(self):
+        "Proves blocks from different groups are interleaved by line number."
+        model = make_model("a", "b", "c", "d")
+        select(model, 0, group=2)
+        select(model, 1, group=1)
+        select(model, 2, group=2)
+        select(model, 3, group=1)
+        out = render_output(model)
+        g2_first = out.index("%%dipper:group:2:1%%")
+        g1_second = out.index("%%dipper:group:1:2%%")
+        g2_third = out.index("%%dipper:group:2:3%%")
+        g1_fourth = out.index("%%dipper:group:1:4%%")
+        assert g2_first < g1_second < g2_third < g1_fourth
 
 
 class TestEncodeRanges:
@@ -244,7 +285,7 @@ class TestSummaryFlag:
     def test_only_group_headers_and_annotations(self):
         model = make_model("a", "b")
         select(model, 0)
-        model.groups.set_annotation(1, "found it")
+        model.groups.set_annotation(1, 0, "found it")
         out = render_output(model, summary=True)
         assert "%%dipper:group:1:" in out
         assert "found it" in out
@@ -270,7 +311,7 @@ class TestLinesPlusSummary:
     def test_selected_lines_and_summary_both_present(self):
         model = make_model("a", "b", "c")
         select(model, 1)
-        model.groups.set_annotation(1, "note")
+        model.groups.set_annotation(1, 1, "note")
         out = render_output(model, lines=True, summary=True)
         assert "b" in out
         assert "%%dipper:mark:1:2%%" in out
@@ -297,7 +338,75 @@ class TestMarkerPattern:
         model = make_model("alpha", "beta")
         select(model, 0, group=1)
         select(model, 1, group=2)
-        model.groups.set_annotation(1, "ann")
+        model.groups.set_annotation(1, 0, "ann")
         for line in render_output(model).splitlines():
             if line.startswith("%%"):
                 assert pattern.match(line), f"Bad marker line: {line!r}"
+
+
+class TestRenderJson:
+    def test_json_contains_filepath(self):
+        "Proves render_json() includes the filepath field."
+        model = make_model("code")
+        select(model, 0)
+        data = json.loads(render_json(model, "myfile.py"))
+        assert data["filepath"] == "myfile.py"
+
+    def test_json_filepath_null_for_stdin(self):
+        "Proves render_json() emits null filepath when no file was given."
+        model = make_model("code")
+        select(model, 0)
+        data = json.loads(render_json(model, None))
+        assert data["filepath"] is None
+
+    def test_json_groups_keyed_by_string_number(self):
+        "Proves render_json() keys groups by their string number."
+        model = make_model("a", "b")
+        select(model, 0, group=1)
+        select(model, 1, group=2)
+        data = json.loads(render_json(model, None))
+        assert "1" in data["groups"]
+        assert "2" in data["groups"]
+
+    def test_json_group_name(self):
+        "Proves render_json() includes the group name."
+        model = make_model("a")
+        select(model, 0)
+        model.groups.set_name(1, "bugs")
+        data = json.loads(render_json(model, None))
+        assert data["groups"]["1"]["name"] == "bugs"
+
+    def test_json_default_group_name(self):
+        "Proves render_json() uses 'group N' when no name is set."
+        model = make_model("a")
+        select(model, 0)
+        data = json.loads(render_json(model, None))
+        assert data["groups"]["1"]["name"] == "group 1"
+
+    def test_json_lines_are_1based(self):
+        "Proves render_json() emits 1-based line numbers."
+        model = make_model("a", "b", "c")
+        select(model, 2)
+        data = json.loads(render_json(model, None))
+        assert data["groups"]["1"]["lines"] == [3]
+
+    def test_json_empty_groups_omitted(self):
+        "Proves render_json() omits groups with no selected lines."
+        model = make_model("a")
+        data = json.loads(render_json(model, None))
+        assert data["groups"] == {}
+
+    def test_json_annotation_present(self):
+        "Proves render_json() includes the annotation for a group with one block."
+        model = make_model("a")
+        select(model, 0)
+        model.groups.set_annotation(1, 0, "important finding")
+        data = json.loads(render_json(model, None))
+        assert data["groups"]["1"]["annotation"] == "important finding"
+
+    def test_json_annotation_null_when_absent(self):
+        "Proves render_json() emits null annotation when no annotation exists."
+        model = make_model("a")
+        select(model, 0)
+        data = json.loads(render_json(model, None))
+        assert data["groups"]["1"]["annotation"] is None

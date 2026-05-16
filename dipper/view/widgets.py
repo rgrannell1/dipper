@@ -33,10 +33,11 @@ class LineListView(ListView):
             items.append(ListItem(static, id=f"l{idx}"))
         super().__init__(*items)
 
-    def gutter(self, idx: int) -> Text:
+    def line_gutter(self, idx: int) -> Text:
         """Line number gutter, highlighted yellow when the line is a search match."""
         line_num = str(idx + 1).rjust(self._gutter_width)
-        highlighted = idx in set(self._model.search.indices)
+        match_set = set(self._model.search.indices)
+        highlighted = idx in match_set
         return gutter_text(line_num, highlighted)
 
     def indicator(self, idx: int, group: int) -> Text:
@@ -51,7 +52,7 @@ class LineListView(ListView):
         is_annotated = line.group != 0
         if is_annotated:
             hi_text.stylize(f"bold {GROUP_COLOURS[line.group]}")
-        gutter = self.gutter(idx)
+        gutter = self.line_gutter(idx)
         indicator = self.indicator(idx, line.group)
         return Text.assemble(gutter, indicator, hi_text)
 
@@ -68,6 +69,7 @@ class LineListView(ListView):
         idx = self.index
         if idx is None:
             return
+        self._model.take_snapshot()
         self._model.toggle_line(idx)
         self.redraw_line(idx)
         self.post_message(self.LineToggled())

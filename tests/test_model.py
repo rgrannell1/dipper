@@ -6,7 +6,8 @@ from dipper.model.state import (
     LineState,
     RangeFillState,
     SearchState,
-    nearest_annotated_group,
+    nearest_annotated_block,
+    nearest_block,
     nearest_group,
     selected_groups,
 )
@@ -75,29 +76,56 @@ class TestGroupLabel:
         assert model.groups.label(1) == "bugs"
 
 
-class TestNearestAnnotatedGroup:
+class TestNearestBlock:
+    def test_none_when_no_groups(self):
+        model = make_model("a", "b")
+        assert nearest_block(model.lines, 0) is None
+
+    def test_returns_nearest_block(self):
+        "Proves nearest_block returns the block start nearest to the cursor."
+        model = make_model("a", "b", "c", "d")
+        model.toggle_line(0)          # group 1 block starts at idx 0
+        model.active_group = 2
+        model.toggle_line(3)          # group 2 block starts at idx 3
+        assert nearest_block(model.lines, 1) == (1, 0)   # closer to idx 0
+        assert nearest_block(model.lines, 3) == (2, 3)   # closer to idx 3
+
+    def test_contiguous_block_returns_start(self):
+        "Proves nearest_block returns the start index of a multi-line block."
+        model = make_model("a", "b", "c")
+        model.toggle_line(0)
+        model.toggle_line(1)
+        model.toggle_line(2)
+        # Cursor at line 2 — block starts at 0
+        result = nearest_block(model.lines, 2)
+        assert result == (1, 0)
+
+
+class TestNearestAnnotatedBlock:
     def test_none_when_no_annotations(self):
         model = make_model("a", "b")
         model.toggle_line(0)
-        assert nearest_annotated_group(model.lines, model.groups.annotations, 0) is None
+        assert nearest_annotated_block(model.lines, model.groups.block_annotations, 0) is None
 
-    def test_returns_group_of_nearest_annotated_line(self):
+    def test_returns_nearest_annotated_block_text(self):
+        "Proves nearest_annotated_block returns the annotation of the nearest annotated block."
         model = make_model("a", "b", "c", "d")
         model.toggle_line(0)
-        model.groups.set_annotation(1, "note")
+        model.groups.set_annotation(1, 0, "note one")
         model.active_group = 2
         model.toggle_line(3)
-        model.groups.set_annotation(2, "other")
-        # cursor at line 1: closer to line 0 (group 1) than line 3 (group 2)
-        assert nearest_annotated_group(model.lines, model.groups.annotations, 1) == 1
-        # cursor at line 3: closer to line 3 (group 2)
-        assert nearest_annotated_group(model.lines, model.groups.annotations, 3) == 2
+        model.groups.set_annotation(2, 3, "note two")
+        # cursor at 0: block at idx 0 has distance 0 → "note one"
+        assert nearest_annotated_block(model.lines, model.groups.block_annotations, 0) == "note one"
+        # cursor at 3: block at idx 3 has distance 0 → "note two"
+        assert nearest_annotated_block(model.lines, model.groups.block_annotations, 3) == "note two"
 
-    def test_ignores_selected_lines_without_annotation(self):
+    def test_ignores_unannotated_blocks(self):
+        "Proves nearest_annotated_block ignores blocks without annotations."
         model = make_model("a", "b")
         model.toggle_line(0)
         # group 1 selected but not annotated
-        assert nearest_annotated_group(model.lines, model.groups.annotations, 0) is None
+        assert nearest_annotated_block(model.lines, model.groups.block_annotations, 0) is None
 
 
 class TestNearestGroup:
@@ -272,17 +300,44 @@ class TestGroupState:
         assert GroupState({2: "bugs"}).label(2) == "bugs"
 
     def test_set_annotation_stores_text(self):
-        "Proves set_annotation() creates an annotation entry."
+        "Proves set_annotation() creates a block annotation entry."
         state = GroupState({})
-        state.set_annotation(1, "important")
-        assert state.annotations[1].text == "important"
+        state.set_annotation(1, 0, "important")
+        assert state.block_annotations[(1, 0)] == "important"
 
     def test_set_annotation_empty_removes_annotation(self):
-        "Proves set_annotation('') removes an existing annotation."
+        "Proves set_annotation('') removes an existing block annotation."
         state = GroupState({})
-        state.set_annotation(1, "note")
-        state.set_annotation(1, "")
-        assert 1 not in state.annotations
+        state.set_annotation(1, 0, "note")
+        state.set_annotation(1, 0, "")
+        assert (1, 0) not in state.block_annotations
+
+    def test_block_annotation_returns_stored_text(self):
+        "Proves block_annotation() retrieves text by (group, block_start)."
+        state = GroupState({})
+        state.set_annotation(2, 5, "found a bug")
+        assert state.block_annotation(2, 5) == "found a bug"
+
+    def test_block_annotation_returns_empty_when_absent(self):
+        "Proves block_annotation() returns '' when no annotation exists for that block."
+        assert GroupState({}).block_annotation(1, 0) == ""
+
+    def test_cleanup_removes_stale_starts(self):
+        "Proves cleanup_annotations() removes entries whose start index is not in valid_starts."
+        state = GroupState({})
+        state.set_annotation(1, 0, "block A")
+        state.set_annotation(1, 5, "block B")
+        state.cleanup_annotations(1, {5})
+        assert (1, 0) not in state.block_annotations
+        assert (1, 5) in state.block_annotations
+
+    def test_cleanup_leaves_other_groups_intact(self):
+        "Proves cleanup_annotations() only removes entries for the specified group."
+        state = GroupState({})
+        state.set_annotation(1, 0, "group 1 block")
+        state.set_annotation(2, 0, "group 2 block")
+        state.cleanup_annotations(1, set())
+        assert (2, 0) in state.block_annotations
 
     def test_set_name_stores_name(self):
         "Proves set_name() records the group name."
@@ -297,12 +352,12 @@ class TestGroupState:
         assert 2 not in state.names
 
     def test_reset_clears_names_annotations_and_active_group(self):
-        "Proves reset() wipes names, annotations, and resets active to 1."
+        "Proves reset() wipes names, block_annotations, and resets active to 1."
         state = GroupState({1: "bugs"})
-        state.set_annotation(1, "note")
+        state.set_annotation(1, 0, "note")
         state.active = 3
         state.reset()
-        assert state.names == {} and state.annotations == {} and state.active == 1
+        assert state.names == {} and state.block_annotations == {} and state.active == 1
 
     def test_active_setter_rejects_zero(self):
         "Proves setting active_group to 0 raises ValueError."
@@ -313,6 +368,86 @@ class TestGroupState:
         "Proves setting active_group beyond GROUP_COUNT raises ValueError."
         with pytest.raises(ValueError):
             GroupState({}).active = 10
+
+
+class TestBlockHelpers:
+    def test_blocks_empty_when_no_group(self):
+        "Proves blocks() returns [] when no lines are in the group."
+        model = make_model("a", "b", "c")
+        assert model.blocks(1) == []
+
+    def test_blocks_single_line(self):
+        "Proves blocks() returns a single-element list for one selected line."
+        model = make_model("a", "b", "c")
+        model.toggle_line(1)
+        assert model.blocks(1) == [(1, 1)]
+
+    def test_blocks_contiguous_run(self):
+        "Proves blocks() returns one tuple for a contiguous block."
+        model = make_model("a", "b", "c")
+        model.toggle_line(0)
+        model.toggle_line(1)
+        model.toggle_line(2)
+        assert model.blocks(1) == [(0, 2)]
+
+    def test_blocks_two_disjoint_runs(self):
+        "Proves blocks() returns two tuples when there is a gap."
+        model = make_model("a", "b", "c", "d", "e")
+        model.toggle_line(0)
+        model.toggle_line(1)
+        model.toggle_line(3)
+        model.toggle_line(4)
+        assert model.blocks(1) == [(0, 1), (3, 4)]
+
+    def test_block_at_selected_line(self):
+        "Proves block_at() returns (group, block_start) for a selected line."
+        model = make_model("a", "b", "c")
+        model.toggle_line(0)
+        model.toggle_line(1)
+        assert model.block_at(1) == (1, 0)
+
+    def test_block_at_unselected_line_returns_none(self):
+        "Proves block_at() returns None for an unselected line."
+        model = make_model("a", "b")
+        assert model.block_at(0) is None
+
+    def test_block_at_block_start(self):
+        "Proves block_at() returns the block's own start when cursor is at start."
+        model = make_model("a", "b", "c")
+        model.toggle_line(1)
+        model.toggle_line(2)
+        assert model.block_at(1) == (1, 1)
+
+
+class TestBlockAnnotationCleanup:
+    def test_deselecting_line_removes_dissolved_block_annotation(self):
+        "Proves that toggling a sole line out of a group removes its block annotation."
+        model = make_model("a", "b")
+        model.toggle_line(0)
+        model.groups.set_annotation(1, 0, "important note")
+        model.toggle_line(0)  # deselect — block dissolves
+        assert (1, 0) not in model.groups.block_annotations
+
+    def test_splitting_block_removes_annotation(self):
+        "Proves that deselecting the middle line of a block removes the original annotation."
+        model = make_model("a", "b", "c")
+        model.toggle_line(0)
+        model.toggle_line(1)
+        model.toggle_line(2)
+        model.groups.set_annotation(1, 0, "original note")
+        model.toggle_line(1)  # split block [0,1,2] into [0] and [2]
+        assert (1, 0) not in model.groups.block_annotations
+
+    def test_merging_blocks_removes_both_annotations(self):
+        "Proves that filling the gap between two annotated blocks removes both annotations."
+        model = make_model("a", "b", "c")
+        model.toggle_line(0)
+        model.toggle_line(2)
+        model.groups.set_annotation(1, 0, "first note")
+        model.groups.set_annotation(1, 2, "second note")
+        model.toggle_line(1)  # merge blocks into [0,1,2] — new block starts at 0
+        # Old block at (1,2) no longer exists, (1,0) is still valid so its annotation stays
+        assert (1, 2) not in model.groups.block_annotations
 
 
 class TestAppStateValidation:
@@ -381,3 +516,46 @@ class TestAppStateReset:
         model = make_model("a", active_group=3)
         model.reset()
         assert model.active_group == 1
+
+
+class TestUndo:
+    def test_undo_restores_line_groups(self):
+        "Proves undo() restores line groups to pre-snapshot state."
+        model = make_model("a", "b")
+        model.take_snapshot()
+        model.toggle_line(0)
+        assert model.lines[0].group == 1
+        model.undo()
+        assert model.lines[0].group == 0
+
+    def test_undo_restores_group_names(self):
+        "Proves undo() restores group names to pre-snapshot state."
+        model = make_model("a")
+        model.groups.set_name(1, "bugs")
+        model.take_snapshot()
+        model.groups.set_name(1, "critical")
+        model.undo()
+        assert model.groups.names.get(1) == "bugs"
+
+    def test_undo_restores_block_annotations(self):
+        "Proves undo() restores block annotations to pre-snapshot state."
+        model = make_model("a", "b")
+        model.toggle_line(0)
+        model.groups.set_annotation(1, 0, "note")
+        model.take_snapshot()
+        model.groups.set_annotation(1, 0, "changed")
+        model.undo()
+        assert model.groups.block_annotation(1, 0) == "note"
+
+    def test_undo_returns_false_without_snapshot(self):
+        "Proves undo() returns False when there is no snapshot to restore."
+        model = make_model("a")
+        assert model.undo() is False
+
+    def test_undo_twice_is_noop(self):
+        "Proves a second undo() call is a no-op (one-level only)."
+        model = make_model("a")
+        model.take_snapshot()
+        model.toggle_line(0)
+        model.undo()
+        assert model.undo() is False

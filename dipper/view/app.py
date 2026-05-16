@@ -9,6 +9,7 @@ from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
 
 from dipper.commons.highlight import highlighted_lines
+from dipper.commons.loader import load_session
 from dipper.commons.themes import DEFAULT_THEME, THEMES
 from dipper.controller.actions import groups as groups_actions
 from dipper.controller.actions import misc as misc_actions
@@ -16,7 +17,7 @@ from dipper.controller.actions import nav as nav_actions
 from dipper.controller.actions import range_fill as range_fill_actions
 from dipper.controller.actions import search as search_actions
 from dipper.controller.actions import theme as theme_actions
-from dipper.controller.output import render_output
+from dipper.controller.output import render_json, render_output
 from dipper.model.state import AppState, LineState
 from dipper.view.bindings import APP_BINDINGS
 from dipper.view.providers import GroupProvider, ThemeProvider
@@ -33,7 +34,7 @@ class ClipperApp(App):
 
     BINDINGS: ClassVar[list[Binding]] = APP_BINDINGS
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         source: str,
         filename: str | None,
@@ -43,6 +44,8 @@ class ClipperApp(App):
         group_names: dict[int, str] | None = None,
         output_lines: bool = False,
         output_summary: bool = False,
+        output_json: bool = False,
+        load_path: str | None = None,
         theme: str = DEFAULT_THEME,
     ) -> None:
         super().__init__()
@@ -51,6 +54,8 @@ class ClipperApp(App):
             lines=[LineState(text=line) for line in source.splitlines()],
             group_names=dict(group_names or {}),
         )
+        if load_path:
+            self.apply_load(source, filename, load_path)
         self._source = source
         self._source_filename = filename
         self._hi_lines = highlighted_lines(source, filename, style=theme_entry["pygments"])
@@ -59,20 +64,35 @@ class ClipperApp(App):
         self._header = header
         self._output_lines = output_lines
         self._output_summary = output_summary
+        self._output_json = output_json
         self.register_theme(theme_entry["textual"])
         self.theme = theme_entry["textual"].name
         self.sub_title = prompt or ""
+
+    def apply_load(self, source: str, filename: str | None, load_path: str) -> None:
+        """Restore line groups, names, and block annotations from a saved session."""
+        session = load_session(source, filename, load_path)
+        for line_num, grp in session.line_groups.items():
+            idx = line_num - 1
+            if 0 <= idx < len(self._model.lines):
+                self._model.set_line_group(idx, grp)
+        for grp, name in session.group_names.items():
+            self._model.groups.set_name(grp, name)
+        for (grp, block_start), text in session.block_annotations.items():
+            if 0 <= block_start < len(self._model.lines):
+                self._model.groups.set_annotation(grp, block_start, text)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         if self._header is not None:
             yield Label(self._header, id="header-label")
         yield LineListView(self._model, self._hi_lines)
-        yield Label(status_bar_text(self._model, self._filename), id="status")
+        yield Label(status_bar_text(self._model, self._filename, 0), id="status")
         yield Footer()
 
     def refresh_status(self) -> None:
-        self.query_one("#status", Label).update(status_bar_text(self._model, self._filename))
+        cursor_idx = self.line_view().cursor_index
+        self.query_one("#status", Label).update(status_bar_text(self._model, self._filename, cursor_idx))
 
     def line_view(self) -> LineListView:
         return self.query_one(LineListView)
@@ -115,10 +135,13 @@ class ClipperApp(App):
         range_fill_actions.fill_range(self)
 
     def action_write_output(self) -> None:
-        result = render_output(
-            self._model, lines=self._output_lines, summary=self._output_summary,
-            filepath=self._output_filepath,
-        )
+        if self._output_json:
+            result = render_json(self._model, self._output_filepath)
+        else:
+            result = render_output(
+                self._model, lines=self._output_lines, summary=self._output_summary,
+                filepath=self._output_filepath,
+            )
         self.exit(result)
 
     def action_goto_line(self) -> None:
@@ -136,6 +159,9 @@ class ClipperApp(App):
     def action_reset(self) -> None:
         misc_actions.reset(self)
 
+    def action_undo(self) -> None:
+        misc_actions.undo(self)
+
     def action_groups_overview(self) -> None:
         misc_actions.open_groups_overview(self)
 
@@ -149,13 +175,15 @@ def run(  # noqa: PLR0913
     group_names: dict[int, str] | None = None,
     output_lines: bool = False,
     output_summary: bool = False,
+    output_json: bool = False,
     output_path: str | None = None,
+    load_path: str | None = None,
     theme: str = DEFAULT_THEME,
 ) -> None:
     app = ClipperApp(
         source, filename, prompt=prompt, header=header,
         group_names=group_names, output_lines=output_lines, output_summary=output_summary,
-        theme=theme,
+        output_json=output_json, load_path=load_path, theme=theme,
     )
     result = app.run()
     if result:

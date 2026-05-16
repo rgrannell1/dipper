@@ -1,5 +1,7 @@
 """Generates the annotated output format from the document model"""
 
+import json
+
 from dipper.commons.constants import (
     GROUP_FORMAT,
     MARK_FORMAT,
@@ -60,26 +62,31 @@ def collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
     return body_lines, group_line_numbers
 
 
-def build_summary(model: DocumentModel, group_line_numbers: dict[int, list[int]]) -> list[str]:
-    used_groups = sorted(selected_groups(model.lines))
-    summary: list[str] = []
-    for group in used_groups:
-        annotation = model.groups.annotations.get(group)
-        annotation_text = annotation.text if annotation else ""
+def build_summary(model: DocumentModel) -> list[str]:
+    """Build the summary block with one entry per block, sorted by start line."""
+    entries: list[tuple[int, int, str | None, str, str]] = []
+    for group in sorted(selected_groups(model.lines)):
         name = model.groups.names.get(group)
-        ranges = encode_ranges(group_line_numbers.get(group, []))
+        for start_idx, end_idx in model.blocks(group):
+            line_numbers = list(range(start_idx + 1, end_idx + 2))
+            ranges = encode_ranges(line_numbers)
+            annotation_text = model.groups.block_annotation(group, start_idx)
+            entries.append((start_idx, group, name, ranges, annotation_text))
+
+    entries.sort(key=lambda entry: entry[0])
+
+    summary: list[str] = []
+    for _, group, name, ranges, annotation_text in entries:
         summary.append(group_header(group, name, ranges))
         summary.append(annotation_text)
         summary.append("")
     return summary
 
 
-def render_full(
-    model: DocumentModel, body_lines: list[str], group_line_numbers: dict[int, list[int]]
-) -> str:
+def render_full(model: DocumentModel, body_lines: list[str]) -> str:
     if not selected_groups(model.lines):
         return "\n".join(body_lines)
-    summary_block = ["", SEPARATOR_LINE, "", *build_summary(model, group_line_numbers)]
+    summary_block = ["", SEPARATOR_LINE, "", *build_summary(model)]
     return "\n".join(body_lines + summary_block)
 
 
@@ -94,7 +101,6 @@ def render_selected_lines(model: DocumentModel) -> str:
 
 def render_filtered(
     model: DocumentModel,
-    group_line_numbers: dict[int, list[int]],
     lines: bool,
     summary: bool,
 ) -> str:
@@ -105,10 +111,27 @@ def render_filtered(
         if selected:
             content_parts.append(selected)
     if summary:
-        summary_block = build_summary(model, group_line_numbers)
+        summary_block = build_summary(model)
         if summary_block:
             content_parts.append("\n".join(summary_block))
     return "\n\n".join(content_parts)
+
+
+def render_json(model: DocumentModel, filepath: str | None) -> str:
+    """Emit a JSON object with filepath and group data; mutually exclusive with text modes."""
+    groups: dict[str, object] = {}
+    for group in sorted(selected_groups(model.lines)):
+        name = model.groups.names.get(group, f"group {group}")
+        line_nums = sorted(idx + 1 for idx, line in enumerate(model.lines) if line.group == group)
+        # Collect annotations across all blocks for this group
+        block_texts = [
+            model.groups.block_annotation(group, start_idx)
+            for start_idx, _ in model.blocks(group)
+            if model.groups.block_annotation(group, start_idx)
+        ]
+        annotation = block_texts[0] if len(block_texts) == 1 else ("; ".join(block_texts) if block_texts else None)
+        groups[str(group)] = {"name": name, "annotation": annotation, "lines": line_nums}
+    return json.dumps({"filepath": filepath, "groups": groups}, indent=2)
 
 
 def render_output(
@@ -118,9 +141,9 @@ def render_output(
     filepath: str | None = None,
 ) -> str:
     meta = META_FILEPATH_FORMAT.format(filepath=filepath) if filepath else None  # type: ignore
-    body_lines, group_line_numbers = collect(model)
+    body_lines, _ = collect(model)
 
     if not lines and not summary:
-        return prepend_meta(render_full(model, body_lines, group_line_numbers), meta)
+        return prepend_meta(render_full(model, body_lines), meta)
 
-    return prepend_meta(render_filtered(model, group_line_numbers, lines, summary), meta)
+    return prepend_meta(render_filtered(model, lines, summary), meta)

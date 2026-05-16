@@ -14,7 +14,7 @@ EXAMPLES = [
     ("dipper --summary < file", "output summary block only"),
 ]
 
-FOOTER_FLAGS = ["dipper <file>", "--preset", "--groups", "--lines", "--summary", "--output"]
+FOOTER_FLAGS = ["dipper <file>", "--preset", "--groups", "--lines", "--summary", "--json", "--output", "--load"]
 
 
 def help_text() -> Text:

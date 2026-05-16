@@ -17,6 +17,7 @@ def fill_range(app: ClipperApp) -> None:
         lv.redraw_line(idx)
         app.refresh_status()
     else:
+        app._model.take_snapshot()
         affected = app._model.range_fill.fill(app._model.lines, idx, app._model.groups.active)
         lv.redraw_lines(affected)
         app.refresh_status()

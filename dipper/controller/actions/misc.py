@@ -1,4 +1,4 @@
-"""Miscellaneous actions: reset state, open groups overview modal."""
+"""Miscellaneous actions: reset state, undo, open groups overview modal."""
 
 from __future__ import annotations
 
@@ -11,11 +11,21 @@ from dipper.view.modals import GroupsModal
 
 
 def reset(app: ClipperApp) -> None:
+    app._model.take_snapshot()
     app._model.reset()
     lv = app.line_view()
     line_count = len(app._model.lines)
     lv.redraw_lines(range(line_count))
     app.refresh_status()
+
+
+def undo(app: ClipperApp) -> None:
+    restored = app._model.undo()
+    if restored:
+        lv = app.line_view()
+        line_count = len(app._model.lines)
+        lv.redraw_lines(range(line_count))
+        app.refresh_status()
 
 
 def open_groups_overview(app: ClipperApp) -> None:

@@ -1,4 +1,4 @@
-"""Line and group annotation data classes."""
+"""Line state data class."""
 
 from dataclasses import dataclass
 
@@ -7,9 +7,3 @@ from dataclasses import dataclass
 class LineState:
     text: str
     group: int = 0
-
-
-@dataclass
-class GroupAnnotation:
-    group: int
-    text: str = ""

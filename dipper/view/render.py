@@ -7,7 +7,7 @@ from rich.text import Text
 from textual.widgets import ListItem, Static
 
 from dipper.commons.constants import GROUP_COLOURS
-from dipper.model.state import AppState, selected_groups
+from dipper.model.state import AppState, nearest_annotated_block, selected_groups
 
 # --- pure render helpers ---
 
@@ -73,9 +73,16 @@ def group_modal_title(group: int) -> str:
     return f"[{colour}]●  group {group}[/]"
 
 
-def annotation_modal_title(group: int, label: str) -> str:
+def annotation_modal_title(group: int, label: str, start_line: int = 0, end_line: int = 0) -> str:
     colour = GROUP_COLOURS[group]
-    return f"[{colour}]Annotation for {label}[/]"
+    if start_line and end_line and start_line != end_line:
+        range_str = f"lines {start_line}-{end_line}"
+    elif start_line:
+        range_str = f"line {start_line}"
+    else:
+        range_str = ""
+    suffix = f"  —  {range_str}" if range_str else ""
+    return f"[{colour}]● {label}{suffix}[/]"
 
 
 def group_row_item(model: AppState, grp: int) -> ListItem:
@@ -96,7 +103,15 @@ def search_section_text(model: AppState) -> Text:
     return result
 
 
-def status_bar_text(model: AppState, filename: str) -> Text:
+def annotation_section_text(model: AppState, cursor_idx: int) -> Text:
+    annotation = nearest_annotated_block(model.lines, model.groups.block_annotations, cursor_idx)
+    result = Text()
+    if annotation:
+        result.append(f"  |  {annotation}", style="italic dim")
+    return result
+
+
+def status_bar_text(model: AppState, filename: str, cursor_idx: int = 0) -> Text:
     active = model.active_group
     colour = GROUP_COLOURS[active]
     result = Text(no_wrap=True, overflow="ellipsis")
@@ -107,6 +122,7 @@ def status_bar_text(model: AppState, filename: str) -> Text:
         result.append("  |  ", style="dim")
         for grp in used:
             result.append_text(group_used_dot(grp))
+    result.append_text(annotation_section_text(model, cursor_idx))
     result.append_text(search_section_text(model))
     result.append(f"  |  {filename}", style="dim")
     return result

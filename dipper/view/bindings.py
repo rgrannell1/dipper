@@ -14,5 +14,6 @@ APP_BINDINGS: ClassVar[list[Binding]] = [
     Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
     Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
     Binding("x", "reset", "Reset"),
+    Binding("u", "undo", "Undo"),
     Binding("o", "groups_overview", "Groups"),
 ]

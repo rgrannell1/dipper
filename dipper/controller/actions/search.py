@@ -66,6 +66,7 @@ def prev_match(app: ClipperApp) -> None:
 
 
 def select_all_matches(app: ClipperApp) -> None:
+    app._model.take_snapshot()
     changed = app._model.search.select_all(app._model.lines, app._model.groups.active)
     if changed:
         app.line_view().redraw_lines(changed)

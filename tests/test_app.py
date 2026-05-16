@@ -85,10 +85,10 @@ class TestReset:
     async def test_x_clears_annotations_and_group_names(self):
         async with make_app().run_test() as pilot:
             model = pilot.app._model
-            model.groups.set_annotation(1, "note")
+            model.groups.set_annotation(1, 0, "note")
             model.groups.set_name(1, "bugs")
             await pilot.press("x")
-            assert model.groups.annotations == {}
+            assert model.groups.block_annotations == {}
             assert model.groups.names == {}
 
     async def test_x_clears_range_anchor(self):
@@ -203,9 +203,8 @@ class TestAnnotationModal:
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
             model = pilot.app._model
-            ann = model.groups.annotations.get(1)
-            assert ann is not None
-            assert ann.text == "important fix"
+            # Line 0 is selected as a single-line block starting at idx 0
+            assert model.groups.block_annotation(1, 0) == "important fix"
 
     async def test_escape_dismisses_without_setting_annotation(self):
         async with make_app().run_test() as pilot:
@@ -215,7 +214,7 @@ class TestAnnotationModal:
             await pilot.press("escape")
             await pilot.pause(delay=0.1)
             model = pilot.app._model
-            assert model.groups.annotations.get(1) is None
+            assert model.groups.block_annotation(1, 0) == ""
             assert len(pilot.app.screen_stack) == 1
 
     async def test_modal_label_shows_group_name(self):

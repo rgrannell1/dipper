@@ -51,6 +51,16 @@ def parse_group_names(groups_csv: str | None) -> dict[int, str]:
     }
 
 
+def validate_output_flags(args: argparse.Namespace) -> None:
+    text_mode = args.lines or args.summary
+    if args.json and text_mode:
+        print("dipper: --json is mutually exclusive with --lines and --summary", file=sys.stderr)
+        sys.exit(1)
+    if args.load and not args.file:
+        print("dipper: --load requires a file argument", file=sys.stderr)
+        sys.exit(1)
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build and return the argparse parser for the dipper CLI."""
     parser = argparse.ArgumentParser(prog="dipper", description="Annotate text interactively")
@@ -67,8 +77,12 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Output selected lines with marks only")
     parser.add_argument("--summary", action="store_true", default=False,
                         help="Output group summary block only")
+    parser.add_argument("--json", action="store_true", default=False,
+                        help="Output annotations as JSON (mutually exclusive with --lines/--summary)")
     parser.add_argument("--output", metavar="FILE", default=None,
                         help="Write output to FILE instead of stdout")
+    parser.add_argument("--load", metavar="FILE", default=None,
+                        help="Restore session from a previously written annotations file")
     return parser
 
 
@@ -84,10 +98,12 @@ def main() -> None:
     cli_ns = parser.parse_args()
     merge_config(cli_ns, config_ns)
     args = cli_ns
+    validate_output_flags(args)
     source, filename = read_source(args, parser)
     group_names = parse_group_names(resolve_groups(args, presets))
     run(
         source, filename,
         prompt=args.prompt, header=args.header, group_names=group_names,
-        output_lines=args.lines, output_summary=args.summary, output_path=args.output,
+        output_lines=args.lines, output_summary=args.summary, output_json=args.json,
+        output_path=args.output, load_path=args.load,
     )
