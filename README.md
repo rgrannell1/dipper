@@ -77,15 +77,15 @@ The separator divides the document body from our group summarise. Headers are fo
 | Token | Meaning |
 |---|---|
 | `{path}` | path of the source file |
-| `{group}` | integer 1–9 identifying the colour group |
-| `{line}` | 1-based line number of the annotated source line |
-| `{underline}` | `^` characters, length ≥ 6 and ≥ source line length |
+| `{group}` | integer 1–9 identifying the group (common category of comment) |
+| `{line}` | line numbere |
+| `{underline}` | `^` pointing to the line above |
 | `{ranges}` | run-length encoded line numbers, e.g. `1-3,7,12-15` |
 | `{name}` | group label from `--groups` / `--preset`, if set |
 
 ## Yazi Integration
 
-`integrations/yazi/dipper-annotate` is a wrapper script that runs dipper and saves output to `<file>.annotations`. Install it on your `$PATH`:
+`integrations/yazi/dipper-annotate` is a wrapper script that runs dipper and saves output to `<file>.annotations`.
 
 ```sh
 cp integrations/yazi/dipper-annotate ~/.local/bin/
@@ -105,7 +105,7 @@ prepend_rules = [
 ]
 ```
 
-Pressing `o` on a text file opens it in dipper. Quitting with `q` writes `<file>.annotations` alongside the source.
+Pressing `o` on a text file opens it in dipper. Writes `<file>.annotations` alongside the source.
 
 ## Shell Completions
 
