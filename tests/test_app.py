@@ -24,7 +24,7 @@ class TestInitialState:
 
     async def test_model_lines_match_source(self):
         async with make_app().run_test() as pilot:
-            texts = [l.text for l in pilot.app._model.lines]
+            texts = [line.text for line in pilot.app._model.lines]
             assert texts == ["alpha", "beta", "gamma"]
 
     async def test_default_active_group_is_1(self):
@@ -36,20 +36,23 @@ class TestTabToggle:
     async def test_tab_selects_line_into_active_group(self):
         async with make_app().run_test() as pilot:
             await pilot.press("tab")
-            assert pilot.app._model.lines[0].group == 1
+            model = pilot.app._model
+            assert model.lines[0].group == 1
 
     async def test_tab_again_deselects_line(self):
         async with make_app().run_test() as pilot:
             await pilot.press("tab")
             await pilot.press("tab")
-            assert pilot.app._model.lines[0].group == 0
+            model = pilot.app._model
+            assert model.lines[0].group == 0
 
     async def test_tab_on_different_active_group_moves_line(self):
         async with make_app().run_test() as pilot:
             await pilot.press("tab")       # group 1
             await pilot.press("2")         # switch to group 2
             await pilot.press("tab")       # moves line 0 to group 2
-            assert pilot.app._model.lines[0].group == 2
+            model = pilot.app._model
+            assert model.lines[0].group == 2
 
 
 class TestNumberKeys:
@@ -60,9 +63,9 @@ class TestNumberKeys:
 
     async def test_all_digit_keys_accepted(self):
         async with make_app().run_test() as pilot:
-            for n in range(1, 10):
-                await pilot.press(str(n))
-                assert pilot.app._model.active_group == n
+            for num in range(1, 10):
+                await pilot.press(str(num))
+                assert pilot.app._model.active_group == num
 
 
 class TestReset:
@@ -126,20 +129,22 @@ class TestGroupsOverview:
 
     async def test_x_in_modal_clears_focused_group_name(self):
         async with make_app().run_test() as pilot:
-            pilot.app._model.set_group_name(1, "bugs")
+            model = pilot.app._model
+            model.set_group_name(1, "bugs")
             await pilot.press("o")
             await pilot.pause()
             await pilot.press("x")
-            assert pilot.app._model.group_names.get(1, "") == ""
+            assert model.group_names.get(1, "") == ""
 
     async def test_x_in_modal_does_not_clear_other_groups(self):
         async with make_app().run_test() as pilot:
-            pilot.app._model.set_group_name(1, "bugs")
-            pilot.app._model.set_group_name(2, "notes")
+            model = pilot.app._model
+            model.set_group_name(1, "bugs")
+            model.set_group_name(2, "notes")
             await pilot.press("o")
             await pilot.pause()
             await pilot.press("x")
-            assert pilot.app._model.group_names.get(2, "") == "notes"
+            assert model.group_names.get(2, "") == "notes"
 
     async def test_escape_closes_modal(self):
         from dipper.modals.groups import GroupsModal
@@ -200,7 +205,8 @@ class TestAnnotationModal:
                 await pilot.press(ch)
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
-            ann = pilot.app._model.annotations.get(1)
+            model = pilot.app._model
+            ann = model.annotations.get(1)
             assert ann is not None
             assert ann.text == "important fix"
 
@@ -211,7 +217,8 @@ class TestAnnotationModal:
             await pilot.pause(delay=0.1)
             await pilot.press("escape")
             await pilot.pause(delay=0.1)
-            assert pilot.app._model.annotations.get(1) is None
+            model = pilot.app._model
+            assert model.annotations.get(1) is None
             assert len(pilot.app.screen_stack) == 1
 
     async def test_modal_label_shows_group_name(self):
@@ -248,7 +255,8 @@ class TestRenameModal:
                 await pilot.press(ch)
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
-            assert pilot.app._model.group_names.get(1) == "bugs"
+            group_names = pilot.app._model.group_names
+            assert group_names.get(1) == "bugs"
 
     async def test_rename_escape_leaves_name_unchanged(self):
         async with make_app().run_test() as pilot:
@@ -257,7 +265,8 @@ class TestRenameModal:
             await pilot.pause(delay=0.1)
             await pilot.press("escape")
             await pilot.pause(delay=0.1)
-            assert pilot.app._model.group_names.get(1) is None
+            group_names = pilot.app._model.group_names
+            assert group_names.get(1) is None
 
 
 class TestPromptFlag:
@@ -284,12 +293,14 @@ class TestHeaderFlag:
 class TestGroupsFlag:
     async def test_groups_prepopulate_names(self):
         async with make_app(group_names={1: "bugs", 2: "features"}).run_test() as pilot:
-            assert pilot.app._model.group_names[1] == "bugs"
-            assert pilot.app._model.group_names[2] == "features"
+            group_names = pilot.app._model.group_names
+            assert group_names[1] == "bugs"
+            assert group_names[2] == "features"
 
     async def test_group_label_uses_prepopulated_name(self):
         async with make_app(group_names={1: "todo"}).run_test() as pilot:
-            assert pilot.app._model.group_label(1) == "todo"
+            model = pilot.app._model
+            assert model.group_label(1) == "todo"
 
 
 class TestWorkflow:

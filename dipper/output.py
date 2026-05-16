@@ -117,7 +117,7 @@ def render_output(
     summary: bool = False,
     filepath: str | None = None,
 ) -> str:
-    meta = META_FILEPATH_FORMAT.format(filepath=filepath) if filepath else None
+    meta = META_FILEPATH_FORMAT.format(filepath=filepath) if filepath else None  # type: ignore
     body_lines, group_line_numbers = collect(model)
 
     if not lines and not summary:
