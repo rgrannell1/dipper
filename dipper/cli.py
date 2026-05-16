@@ -7,7 +7,13 @@ from pathlib import Path
 from dipper.commons.config import config_path, parse_config
 from dipper.commons.constants import BUILTIN_PRESETS
 from dipper.commons.help import print_help
-from dipper.commons.paths import AUTO_OUTPUT_SENTINEL, annotation_path, find_unannotated_files, resolve_output_path
+from dipper.commons.paths import (
+    AUTO_OUTPUT_SENTINEL,
+    annotation_path,
+    find_annotated_files,
+    find_unannotated_files,
+    resolve_output_path,
+)
 from dipper.view.app import run
 from dipper.view.app_types import RunArgs
 
@@ -63,6 +69,9 @@ def validate_files_flags(args: argparse.Namespace) -> None:
     if args.files and args.output is not None:
         print("dipper: --files and --output are mutually exclusive", file=sys.stderr)
         sys.exit(1)
+    if args.edit and not args.files:
+        print("dipper: --edit requires --files", file=sys.stderr)
+        sys.exit(1)
 
 
 def validate_full_flags(args: argparse.Namespace) -> None:
@@ -88,6 +97,20 @@ def validate_output_flags(args: argparse.Namespace) -> None:
     validate_files_flags(args)
 
 
+def add_output_flags(parser: argparse.ArgumentParser) -> None:
+    """Register output-mode flags on parser."""
+    parser.add_argument("--full", action="store_true", default=False,
+                        help="Output full annotated file (default is compact: lines + summary)")
+    parser.add_argument("--lines", action="store_true", default=False,
+                        help="Output selected lines with marks only")
+    parser.add_argument("--summary", action="store_true", default=False,
+                        help="Output group summary block only")
+    parser.add_argument("--json", action="store_true", default=False,
+                        help="Output annotations as JSON (mutually exclusive with --lines/--summary)")
+    parser.add_argument("--output", metavar="FILE", nargs="?", const=AUTO_OUTPUT_SENTINEL, default=None,
+                        help="Write output to FILE; bare --output writes to <fpath>.annotations")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build and return the argparse parser for the dipper CLI."""
     parser = argparse.ArgumentParser(prog="dipper", description="Annotate text interactively")
@@ -100,48 +123,44 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Comma-separated group names")
     parser.add_argument("--preset", metavar="NAME", default=None,
                         help="Named group preset from config file")
-    parser.add_argument("--full", action="store_true", default=False,
-                        help="Output full annotated file (default is compact: lines + summary)")
-    parser.add_argument("--lines", action="store_true", default=False,
-                        help="Output selected lines with marks only")
-    parser.add_argument("--summary", action="store_true", default=False,
-                        help="Output group summary block only")
-    parser.add_argument("--json", action="store_true", default=False,
-                        help="Output annotations as JSON (mutually exclusive with --lines/--summary)")
-    parser.add_argument("--output", metavar="FILE", nargs="?", const=AUTO_OUTPUT_SENTINEL, default=None,
-                        help="Write output to FILE; bare --output writes to <fpath>.annotations")
+    add_output_flags(parser)
     parser.add_argument("--load", metavar="FILE", default=None,
                         help="Restore session from a previously written annotations file")
     parser.add_argument("--files", metavar="GLOB", default=None,
                         help="Annotate all files matching GLOB that lack a .annotations file")
+    parser.add_argument("--edit", action="store_true", default=False,
+                        help="With --files: open already-annotated files by loading their .annotations sidecar")
     return parser
-
-
-def build_run_args(
-    args: argparse.Namespace, filename: str | None, output_path: str | None, group_names: dict[int, str]
-) -> RunArgs:
-    return RunArgs(
-        filename=filename, prompt=args.prompt, header=args.header, group_names=group_names,
-        output_lines=args.lines, output_summary=args.summary, output_json=args.json, output_full=args.full,
-        output_path=output_path, load_path=args.load,
-    )
 
 
 def iter_run_targets(
     args: argparse.Namespace, parser: argparse.ArgumentParser
 ):
-    """Yield (source, filename, output_path) for each file to process."""
+    """Yield (source, filename, output_path, load_path) for each file to process."""
     if args.files:
-        for fpath in find_unannotated_files(args.files):
+        candidates = find_annotated_files(args.files) if args.edit else find_unannotated_files(args.files)
+        for fpath in candidates:
             try:
                 source = fpath.read_text()
             except UnicodeDecodeError:
                 print(f"dipper: skipping binary file: {fpath}", file=sys.stderr)
                 continue
-            yield source, str(fpath), str(annotation_path(fpath))
+            sidecar = str(annotation_path(fpath))
+            load_path = sidecar if args.edit else None
+            yield source, str(fpath), sidecar, load_path
     else:
         source, filename = read_source(args, parser)
-        yield source, filename, resolve_output_path(args.output, filename)
+        yield source, filename, resolve_output_path(args.output, filename), args.load
+
+
+def run_batch(args: argparse.Namespace, targets: list, group_names: dict[int, str]) -> None:
+    """Launch a TUI session for each (source, filename, output_path, load_path) target."""
+    for source, filename, output_path, load_path in targets:
+        run(source, RunArgs(
+            filename=filename, prompt=args.prompt, header=args.header, group_names=group_names,
+            output_lines=args.lines, output_summary=args.summary, output_json=args.json, output_full=args.full,
+            output_path=output_path, load_path=load_path,
+        ))
 
 
 def main() -> None:
@@ -160,7 +179,7 @@ def main() -> None:
     group_names = parse_group_names(resolve_groups(args, presets))
     targets = list(iter_run_targets(args, parser))
     if args.files and not targets:
-        print("dipper: no unannotated files found", file=sys.stderr)
+        label = "annotated" if args.edit else "unannotated"
+        print(f"dipper: no {label} files found", file=sys.stderr)
         return
-    for source, filename, output_path in targets:
-        run(source, build_run_args(args, filename, output_path, group_names))
+    run_batch(args, targets, group_names)
