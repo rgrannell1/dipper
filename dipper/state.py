@@ -47,6 +47,13 @@ class SearchState:
         self.cursor = (self.cursor - 1) % len(self.indices)
         return self.indices[self.cursor]
 
+    def select_all(self, lines: list[LineState], active_group: int) -> list[int]:
+        """Assign all matched lines to active_group. Returns list of changed indices."""
+        changed = list(self.indices)
+        for line_idx in changed:
+            lines[line_idx].group = active_group
+        return changed
+
 
 class RangeFillState:
     """Tracks a pending range-fill anchor and the group it was set for."""
@@ -61,6 +68,20 @@ class RangeFillState:
 
     def clear_anchor(self) -> None:
         self.anchor = None
+
+    def fill(self, lines: list[LineState], end_idx: int, active_group: int) -> range:
+        """Fill from anchor to end_idx with active_group. Returns affected range. Clears anchor."""
+        if self.anchor is None:
+            raise RuntimeError("fill called with no anchor set")
+        if not (0 <= end_idx < len(lines)):
+            raise IndexError(f"end index {end_idx} out of range")
+        start = min(self.anchor, end_idx)
+        end = max(self.anchor, end_idx)
+        affected = range(start, end + 1)
+        for line_idx in affected:
+            lines[line_idx].group = active_group
+        self.clear_anchor()
+        return affected
 
 
 class GroupState:
@@ -100,3 +121,36 @@ class GroupState:
         self._active = 1
         self.names.clear()
         self.annotations.clear()
+
+
+def selected_groups(lines: list[LineState]) -> set[int]:
+    """Return the set of non-zero group numbers present in lines."""
+    return {line.group for line in lines if line.group != 0}
+
+
+def nearest_group(lines: list[LineState], cursor: int) -> int | None:
+    """Return the group of the nearest assigned line to cursor, or None."""
+    best_group = None
+    best_distance = None
+    for idx, line in enumerate(lines):
+        if line.group == 0:
+            continue
+        distance = abs(idx - cursor)
+        if best_distance is None or distance < best_distance:
+            best_distance = distance
+            best_group = line.group
+    return best_group
+
+
+def nearest_annotated_group(lines: list[LineState], annotations: dict, cursor: int) -> int | None:
+    """Return the group of the nearest annotated assigned line to cursor, or None."""
+    best_group = None
+    best_distance = None
+    for idx, line in enumerate(lines):
+        if line.group == 0 or line.group not in annotations:
+            continue
+        distance = abs(idx - cursor)
+        if best_distance is None or distance < best_distance:
+            best_distance = distance
+            best_group = line.group
+    return best_group
