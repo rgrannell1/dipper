@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from dipper.__main__ import parse_config, resolve_groups
+from dipper.cli import resolve_groups
+from dipper.config import parse_config
 
 
 def write_config(content: str) -> Path:
