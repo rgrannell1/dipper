@@ -49,7 +49,7 @@ dipper <file> --lines --summary --output <somewhere custom>
 
 ## Output Format
 
-Dipper writes structured plain text. All metadata lines are prefixed with `%%dipper:` so they can be identified and stripped by downstream tools.
+All metadata lines are prefixed with `%%dipper:`
 
 **Structure**
 
