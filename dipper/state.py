@@ -1,4 +1,4 @@
-# Sub-state classes that AppState delegates to.
+"""Sub-state classes that AppState delegates to."""
 
 from dataclasses import dataclass
 
