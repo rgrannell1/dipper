@@ -10,6 +10,7 @@ from dipper.commons.themes import DEFAULT_THEME, THEMES
 
 
 def choose_lexer(source: str, filename: str | None):
+    """Pick the best Pygments lexer: filename match, then content guess, then plain text."""
     if filename:
         try:
             return get_lexer_for_filename(filename)
