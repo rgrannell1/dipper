@@ -17,16 +17,100 @@ class GroupAnnotation:
     text: str = ""
 
 
-class AppState:
-    """All mutable state for one dipper session.
+class SearchState:
+    """Tracks active search pattern, match positions, and cursor within matches."""
 
-    Invariants enforced by every mutating method:
+    def __init__(self) -> None:
+        self.pattern: str = ""
+        self.indices: list[int] = []
+        self.cursor: int = 0
+
+    def set(self, pattern: str, indices: list[int]) -> None:
+        self.pattern = pattern
+        self.indices = indices
+        self.cursor = 0
+
+    def clear(self) -> None:
+        self.pattern = ""
+        self.indices = []
+        self.cursor = 0
+
+    def advance(self) -> int | None:
+        if not self.indices:
+            return None
+        self.cursor = (self.cursor + 1) % len(self.indices)
+        return self.indices[self.cursor]
+
+    def retreat(self) -> int | None:
+        if not self.indices:
+            return None
+        self.cursor = (self.cursor - 1) % len(self.indices)
+        return self.indices[self.cursor]
+
+
+class RangeFillState:
+    """Tracks a pending range-fill anchor and the group it was set for."""
+
+    def __init__(self) -> None:
+        self.anchor: int | None = None
+        self.anchor_group: int = 1
+
+    def set_anchor(self, idx: int, group: int) -> None:
+        self.anchor = idx
+        self.anchor_group = group
+
+    def clear_anchor(self) -> None:
+        self.anchor = None
+
+
+class GroupState:
+    """Tracks the active group selection, group names, and annotations."""
+
+    def __init__(self, group_names: dict[int, str], active_group: int = 1) -> None:
+        self._active: int = active_group
+        self.names: dict[int, str] = dict(group_names)
+        self.annotations: dict[int, GroupAnnotation] = {}
+
+    @property
+    def active(self) -> int:
+        return self._active
+
+    @active.setter
+    def active(self, value: int) -> None:
+        if not (1 <= value <= GROUP_COUNT):
+            raise ValueError(f"active_group must be 1-{GROUP_COUNT}, got {value}")
+        self._active = value
+
+    def set_annotation(self, group: int, text: str) -> None:
+        if text:
+            self.annotations[group] = GroupAnnotation(group=group, text=text)
+        else:
+            self.annotations.pop(group, None)
+
+    def set_name(self, group: int, name: str) -> None:
+        if name:
+            self.names[group] = name
+        else:
+            self.names.pop(group, None)
+
+    def label(self, group: int) -> str:
+        return self.names.get(group, f"group {group}")
+
+    def reset(self) -> None:
+        self._active = 1
+        self.names.clear()
+        self.annotations.clear()
+
+
+class AppState:
+    """Coordinator: owns document lines; delegates group, search, and range-fill to sub-states.
+
+    Invariants:
     - active_group is always in 1..GROUP_COUNT
     - line.group is always 0 or 1..GROUP_COUNT
     - range_anchor is None or a valid line index
-    - range_anchor_group equals active_group at the moment the anchor was set
-    - match_cursor is always within bounds of match_indices (or 0 when empty)
     - switching active_group always clears the range anchor
+    - match_cursor is always within bounds of match_indices (or 0 when empty)
     """
 
     def __init__(
@@ -38,16 +122,9 @@ class AppState:
         if not (1 <= active_group <= GROUP_COUNT):
             raise ValueError(f"active_group must be 1-{GROUP_COUNT}, got {active_group}")
         self._lines: list[LineState] = lines
-        self._annotations: dict[int, GroupAnnotation] = {}
-        self._group_names: dict[int, str] = dict(group_names or {})
-        self._active_group: int = active_group
-        # search state
-        self._search_pattern: str = ""
-        self._match_indices: list[int] = []
-        self._match_cursor: int = 0
-        # range-fill state
-        self._range_anchor: int | None = None
-        self._range_anchor_group: int = active_group
+        self._groups = GroupState(group_names or {}, active_group)
+        self._search = SearchState()
+        self._range_fill = RangeFillState()
 
     # ── read-only properties ──────────────────────────────────────────────────
 
@@ -57,44 +134,42 @@ class AppState:
 
     @property
     def annotations(self) -> dict[int, GroupAnnotation]:
-        return self._annotations
+        return self._groups.annotations
 
     @property
     def group_names(self) -> dict[int, str]:
-        return self._group_names
+        return self._groups.names
 
     @property
     def search_pattern(self) -> str:
-        return self._search_pattern
+        return self._search.pattern
 
     @property
     def match_indices(self) -> list[int]:
-        return self._match_indices
+        return self._search.indices
 
     @property
     def match_cursor(self) -> int:
-        return self._match_cursor
+        return self._search.cursor
 
     @property
     def range_anchor(self) -> int | None:
-        return self._range_anchor
+        return self._range_fill.anchor
 
     @property
     def range_anchor_group(self) -> int:
-        return self._range_anchor_group
+        return self._range_fill.anchor_group
 
-    # ── active_group: validated property ─────────────────────────────────────
+    # ── active_group: validated, clears range anchor on change ───────────────
 
     @property
     def active_group(self) -> int:
-        return self._active_group
+        return self._groups.active
 
     @active_group.setter
     def active_group(self, value: int) -> None:
-        if not (1 <= value <= GROUP_COUNT):
-            raise ValueError(f"active_group must be 1-{GROUP_COUNT}, got {value}")
-        self._active_group = value
-        self._range_anchor = None  # switching group always invalidates the anchor
+        self._groups.active = value  # raises ValueError if out of range
+        self._range_fill.clear_anchor()
 
     # ── document mutations ────────────────────────────────────────────────────
 
@@ -102,7 +177,7 @@ class AppState:
         if not (0 <= idx < len(self._lines)):
             raise IndexError(f"line index {idx} out of range [0, {len(self._lines)})")
         line = self._lines[idx]
-        line.group = 0 if line.group == self._active_group else self._active_group
+        line.group = 0 if line.group == self._groups.active else self._groups.active
 
     def set_line_group(self, idx: int, group: int) -> None:
         if not (0 <= idx < len(self._lines)):
@@ -112,79 +187,64 @@ class AppState:
         self._lines[idx].group = group
 
     def set_annotation(self, group: int, text: str) -> None:
-        if text:
-            self._annotations[group] = GroupAnnotation(group=group, text=text)
-        else:
-            self._annotations.pop(group, None)
+        self._groups.set_annotation(group, text)
 
     def set_group_name(self, group: int, name: str) -> None:
-        if name:
-            self._group_names[group] = name
-        else:
-            self._group_names.pop(group, None)
+        self._groups.set_name(group, name)
 
     # ── range-fill mutations ──────────────────────────────────────────────────
 
     def set_range_anchor(self, idx: int | None) -> None:
         if idx is not None and not (0 <= idx < len(self._lines)):
             raise IndexError(f"anchor index {idx} out of range")
-        self._range_anchor = idx
-        self._range_anchor_group = self._active_group
+        if idx is None:
+            self._range_fill.clear_anchor()
+        else:
+            self._range_fill.set_anchor(idx, self._groups.active)
 
     def fill_range(self, end_idx: int) -> range:
         """Fill from anchor to end_idx with active_group. Returns affected range. Clears anchor."""
-        if self._range_anchor is None:
+        if self._range_fill.anchor is None:
             raise RuntimeError("fill_range called with no anchor set")
         if not (0 <= end_idx < len(self._lines)):
             raise IndexError(f"end index {end_idx} out of range")
-        start = min(self._range_anchor, end_idx)
-        end = max(self._range_anchor, end_idx)
+        start = min(self._range_fill.anchor, end_idx)
+        end = max(self._range_fill.anchor, end_idx)
         affected = range(start, end + 1)
-        for i in affected:
-            self._lines[i].group = self._active_group
-        self._range_anchor = None
+        for line_idx in affected:
+            self._lines[line_idx].group = self._groups.active
+        self._range_fill.clear_anchor()
         return affected
 
     # ── search mutations ──────────────────────────────────────────────────────
 
     def set_search(self, pattern: str, indices: list[int]) -> None:
-        self._search_pattern = pattern
-        self._match_indices = indices
-        self._match_cursor = 0
+        self._search.set(pattern, indices)
 
     def clear_search(self) -> None:
-        self._search_pattern = ""
-        self._match_indices = []
-        self._match_cursor = 0
+        self._search.clear()
 
     def next_match(self) -> int | None:
-        if not self._match_indices:
-            return None
-        self._match_cursor = (self._match_cursor + 1) % len(self._match_indices)
-        return self._match_indices[self._match_cursor]
+        return self._search.advance()
 
     def prev_match(self) -> int | None:
-        if not self._match_indices:
-            return None
-        self._match_cursor = (self._match_cursor - 1) % len(self._match_indices)
-        return self._match_indices[self._match_cursor]
+        return self._search.retreat()
+
+    # ── full reset ────────────────────────────────────────────────────────────
 
     def reset(self) -> None:
         """Reset all session state to initial values. Cursor position is not affected."""
         for line in self._lines:
             line.group = 0
-        self._annotations.clear()
-        self._group_names.clear()
-        self._active_group = 1
-        self._range_anchor = None
-        self._range_anchor_group = 1
-        self.clear_search()
+        self._groups.reset()
+        self._search.clear()
+        self._range_fill.clear_anchor()
 
     def select_all_matches(self) -> list[int]:
         """Assign all matched lines to active_group. Returns list of changed indices."""
-        changed = list(self._match_indices)
-        for idx in changed:
-            self._lines[idx].group = self._active_group
+        changed = list(self._search.indices)
+        for line_idx in changed:
+            self._lines[line_idx].group = self._groups.active
         return changed
 
     # ── queries ───────────────────────────────────────────────────────────────
@@ -193,7 +253,7 @@ class AppState:
         return {line.group for line in self._lines if line.group != 0}
 
     def group_label(self, group: int) -> str:
-        return self._group_names.get(group, f"group {group}")
+        return self._groups.label(group)
 
     def nearest_group(self, cursor: int) -> int | None:
         best_group = None
@@ -211,7 +271,7 @@ class AppState:
         best_group = None
         best_distance = None
         for idx, line in enumerate(self._lines):
-            if line.group == 0 or line.group not in self._annotations:
+            if line.group == 0 or line.group not in self._groups.annotations:
                 continue
             distance = abs(idx - cursor)
             if best_distance is None or distance < best_distance:

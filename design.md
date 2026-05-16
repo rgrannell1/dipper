@@ -290,6 +290,55 @@ A reviewer who wants to start over without quitting and relaunching dipper curre
 
 ---
 
+## `o` — groups overview modal
+
+Pressing `o` opens a modal listing all nine groups at once, so a reviewer can survey and rename every group without having to navigate the cursor to a line belonging to each group in turn.
+
+### Layout
+
+Each row corresponds to one group, 1–9, displayed in order:
+
+```
+● group 1   bug              12 lines
+● group 2   critical          3 lines
+● group 3   group 3           0 lines   (dimmed)
+  ...
+```
+
+Columns:
+
+| Column | Content |
+|---|---|
+| Dot | Coloured `●` in that group's colour |
+| Name | The current group name, or `group N` in dim style if unset |
+| Line count | Number of lines currently assigned to this group; `0 lines` shown dimmed |
+
+The focused row is highlighted. Groups with zero lines are shown in a dimmer style but remain navigable.
+
+### Keys inside the modal
+
+| Key | Action |
+|---|---|
+| `↑` / `↓` | Move focus between rows |
+| `enter` | Edit the focused group's name (opens an inline text input in that row) |
+| `x` | Clear the focused group's name (resets to default `group N`); does not affect selections, annotations, or other groups |
+| `esc` | Close the modal |
+
+Name changes take effect immediately in the model as each edit is committed — the status bar and line list reflect the new name without requiring the modal to be closed first.
+
+### Motivation
+
+`r` renames whichever group the cursor line belongs to. If several groups need renaming, the reviewer must navigate to a line in each group before pressing `r`. The overview modal makes all nine names simultaneously visible and editable, which is especially useful at the start of a session when setting up a workflow, or at the end when tidying labels before writing output.
+
+### Constraints
+
+- Opening the modal does not change `active_group` or any other model state.
+- `x` inside the modal clears only the focused group's name — it is scoped to the modal, not a global reset.
+- Closing with `esc` leaves all edits made during the session in place; there is no cancel/undo within the modal.
+- The modal does not expose line toggling, annotation editing, or any other action — it is name-management only.
+
+---
+
 ## Metadata section
 
 ### Problem

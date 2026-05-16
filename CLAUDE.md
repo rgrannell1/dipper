@@ -1,3 +1,5 @@
+@/home/rg/Agents/AGENTS.md
+@/home/rg/Agents/agents.python.md
 # dipper
 
 ## Testing

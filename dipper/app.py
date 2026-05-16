@@ -7,18 +7,11 @@ from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
 from textual import events
 
-from rich.text import Text
-from rich.style import Style
-
-from dipper.constants import GROUP_COLOURS
 from dipper.highlight import highlighted_lines
 from dipper.model import AppState, LineState
 from dipper.output import render_output
-from dipper.modals import AnnotationModal, CommandModal, RenameModal
-from dipper.view import (
-    GroupProvider, LineListView,
-    group_dot, group_used_dot, search_hit_text, search_miss_text,
-)
+from dipper.modals import AnnotationModal, CommandModal, GroupsModal, RenameModal
+from dipper.view import GroupProvider, LineListView, status_bar_text
 
 
 class ClipperApp(App):
@@ -38,6 +31,7 @@ class ClipperApp(App):
         Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
         Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
         Binding("x", "reset", "Reset", show=False),
+        Binding("o", "groups_overview", "Groups"),
     ]
 
     def __init__(
@@ -70,7 +64,7 @@ class ClipperApp(App):
         if self._header is not None:
             yield Label(self._header, id="header-label")
         yield LineListView(self._model, self._hi_lines)
-        yield Label(self.status_text(), id="status")
+        yield Label(status_bar_text(self._model, self._filename), id="status")
         yield Footer()
 
     def cursor_group(self) -> int:
@@ -81,37 +75,9 @@ class ClipperApp(App):
             return 0
         return self._model.lines[idx].group if idx < len(self._model.lines) else 0
 
-    def append_search_section(self, result: Text) -> None:
-        """Appends the search match indicator to a status Text in place."""
-        pattern = self._model.search_pattern
-        if not pattern:
-            return
-        if self._model.match_indices:
-            pos = self._model.match_cursor + 1
-            total = len(self._model.match_indices)
-            result.append_text(search_hit_text(pattern, pos, total))
-        else:
-            result.append_text(search_miss_text(pattern))
-
-    def status_text(self) -> Text:
-        """Builds the status bar: active group, used-group dots, search indicator, filename."""
-        active = self._model.active_group
-        result = Text(no_wrap=True, overflow="ellipsis")
-        colour = GROUP_COLOURS[active]
-        result.append_text(group_dot(colour))
-        result.append(self._model.group_label(active), style=Style(color=colour, bold=True))
-        used = sorted(self._model.selected_groups())
-        if used:
-            result.append("  |  ", style="dim")
-            for grp in used:
-                result.append_text(group_used_dot(grp))
-        self.append_search_section(result)
-        result.append(f"  |  {self._filename}", style="dim")
-        return result
-
     def refresh_status(self) -> None:
         """Re-renders the status label from current model state."""
-        self.query_one("#status", Label).update(self.status_text())
+        self.query_one("#status", Label).update(status_bar_text(self._model, self._filename))
 
     def line_view(self) -> LineListView:
         """Returns the LineListView widget."""
@@ -273,6 +239,9 @@ class ClipperApp(App):
         lv = self.line_view()
         lv.redraw_lines(range(len(self._model.lines)))
         self.refresh_status()
+
+    def action_groups_overview(self) -> None:
+        self.push_screen(GroupsModal(self._model), lambda _: self.refresh_status())
 
     def set_group(self, group: int) -> None:
         """Changes the active group, clearing any pending range-fill anchor."""

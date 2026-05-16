@@ -106,6 +106,51 @@ class TestReset:
             assert model.match_indices == []
 
 
+class TestGroupsOverview:
+    async def test_o_opens_groups_modal(self):
+        from dipper.modals.groups import GroupsModal
+        async with make_app().run_test() as pilot:
+            await pilot.press("o")
+            await pilot.pause()
+            assert isinstance(pilot.app.screen, GroupsModal)
+
+    async def test_modal_shows_all_nine_groups(self):
+        from dipper.modals.groups import GroupsModal
+        from textual.widgets import ListView
+        async with make_app().run_test() as pilot:
+            await pilot.press("o")
+            await pilot.pause()
+            modal = pilot.app.screen
+            lv = modal.query_one(ListView)
+            assert len(lv._nodes) == 9
+
+    async def test_x_in_modal_clears_focused_group_name(self):
+        async with make_app().run_test() as pilot:
+            pilot.app._model.set_group_name(1, "bugs")
+            await pilot.press("o")
+            await pilot.pause()
+            await pilot.press("x")
+            assert pilot.app._model.group_names.get(1, "") == ""
+
+    async def test_x_in_modal_does_not_clear_other_groups(self):
+        async with make_app().run_test() as pilot:
+            pilot.app._model.set_group_name(1, "bugs")
+            pilot.app._model.set_group_name(2, "notes")
+            await pilot.press("o")
+            await pilot.pause()
+            await pilot.press("x")
+            assert pilot.app._model.group_names.get(2, "") == "notes"
+
+    async def test_escape_closes_modal(self):
+        from dipper.modals.groups import GroupsModal
+        async with make_app().run_test() as pilot:
+            await pilot.press("o")
+            await pilot.pause()
+            await pilot.press("escape")
+            await pilot.pause()
+            assert not isinstance(pilot.app.screen, GroupsModal)
+
+
 class TestWriteAndQuit:
     async def test_q_exits_with_output_string(self):
         app = make_app()

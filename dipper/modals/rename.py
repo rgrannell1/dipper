@@ -7,7 +7,7 @@ from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Input, Label
 
-from dipper.constants import GROUP_COLOURS
+from dipper.view import group_modal_title
 
 CSS_PATH = Path(__file__).parent / "rename.tcss"
 
@@ -24,8 +24,7 @@ class RenameModal(ModalScreen[str]):
         self._existing = existing
 
     def compose(self) -> ComposeResult:
-        colour = GROUP_COLOURS[self._group]
-        yield Label(f"[{colour}]●  group {self._group}[/]", id="modal-label")
+        yield Label(group_modal_title(self._group), id="modal-label")
         yield Input(value=self._existing, placeholder="name…", id="modal-input")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
