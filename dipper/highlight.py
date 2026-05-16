@@ -7,7 +7,7 @@ from pygments.lexers import get_lexer_for_filename
 from pygments.util import ClassNotFound
 
 
-def _choose_lexer(source: str, filename: str | None):
+def choose_lexer(source: str, filename: str | None):
     if filename:
         try:
             return get_lexer_for_filename(filename)
@@ -21,7 +21,7 @@ def _choose_lexer(source: str, filename: str | None):
 
 def highlighted_lines(source: str, filename: str | None = None) -> list[str]:
     """Return source split into lines with ANSI colour codes applied."""
-    lexer = _choose_lexer(source, filename)
+    lexer = choose_lexer(source, filename)
     formatter = TerminalTrueColorFormatter(style="monokai")
     rendered = highlight(source, lexer, formatter)
     # Strip trailing newline that pygments always appends

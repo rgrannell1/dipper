@@ -1,6 +1,7 @@
-# Main Textual application for clipper
+# Main Textual application for dipper
 
 import functools
+import re as _re
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.command import Provider, Hit, Hits
@@ -13,9 +14,64 @@ from rich.style import Style
 
 from dipper.constants import GROUP_COLOURS
 from dipper.highlight import highlighted_lines
-from dipper.model import DocumentModel, LineState
+from dipper.model import AppState, LineState
 from dipper.output import render_output
 from dipper.modals import AnnotationModal, CommandModal, RenameModal
+
+
+# --- view helpers (pure functions, no app/widget state) ---
+
+
+def group_dot(colour: str) -> Text:
+    return Text("● ", style=Style(color=colour, bold=True))
+
+
+def group_display(group: int, label: str, note: str) -> Text:
+    colour = GROUP_COLOURS[group]
+    display = Text()
+    display.append_text(group_dot(colour))
+    display.append(f"group {group}: ", style="dim")
+    display.append(label, style=Style(color=colour, bold=True))
+    if note:
+        display.append(f"  —  {note}", style="dim")
+    return display
+
+
+def group_score(matcher, query: str, group: int, label: str, note: str) -> float:
+    searchable = f"group {group}: {label}  {note}"
+    return matcher.match(searchable) if query else 1.0
+
+
+def gutter_text(line_num: str, highlighted: bool) -> Text:
+    style = "bold yellow" if highlighted else "dim"
+    return Text(f"{line_num} ", style=style)
+
+
+def indicator_text(group: int, anchor_group: int, is_anchor: bool) -> Text:
+    if group != 0:
+        return Text("● ", style=f"bold {GROUP_COLOURS[group]}")
+    if is_anchor:
+        return Text("◆ ", style=f"bold {GROUP_COLOURS[anchor_group]}")
+    return Text("  ")
+
+
+def search_hit_text(pattern: str, pos: int, total: int) -> Text:
+    result = Text()
+    result.append(f"  |  /{pattern} [{pos}/{total}]", style="bold yellow")
+    return result
+
+
+def search_miss_text(pattern: str) -> Text:
+    result = Text()
+    result.append(f"  |  /{pattern} [no matches]", style="dim yellow")
+    return result
+
+
+def group_used_dot(group: int) -> Text:
+    return Text("● ", style=Style(color=GROUP_COLOURS[group], bold=True))
+
+
+# --- command palette provider ---
 
 
 class GroupProvider(Provider):
@@ -24,37 +80,32 @@ class GroupProvider(Provider):
     async def search(self, query: str) -> Hits:
         app: ClipperApp = self.app  # type: ignore
         model = app._model
-        used = sorted(model.selected_groups())
         matcher = self.matcher(query)
 
-        for group in used:
+        for group in sorted(model.selected_groups()):
             label = model.group_label(group)
             annotation = model.annotations.get(group)
             note = annotation.text if annotation else ""
-            colour = GROUP_COLOURS[group]
 
-            searchable = f"group {group}: {label}  {note}"
-            score = matcher.match(searchable) if query else 1.0
+            score = group_score(matcher, query, group, label, note)
             if score == 0:
                 continue
-
-            display = Text()
-            display.append("● ", style=Style(color=colour, bold=True))
-            display.append(f"group {group}: ", style="dim")
-            display.append(label, style=Style(color=colour, bold=True))
-            if note:
-                display.append(f"  —  {note}", style="dim")
 
             first_line = next(
                 (idx for idx, line in enumerate(model.lines) if line.group == group), None
             )
-            command = functools.partial(app._jump_to_line, first_line) if first_line is not None else app._noop
+            jump = functools.partial(app.jump_to_line, first_line)
+            command = jump if first_line is not None else app.noop
 
-            yield Hit(score=score, match_display=display, command=command)
+            yield Hit(
+                score=score,
+                match_display=group_display(group, label, note),
+                command=command,
+            )
 
 
 class LineListView(ListView):
-    """Annotatable line list backed by Textual ListView."""
+    """Line list that renders purely from AppState — owns no model state of its own."""
 
     class LineToggled(Message):
         pass
@@ -63,73 +114,51 @@ class LineListView(ListView):
         Binding("tab", "toggle_line", "Select line", priority=True),
     ]
 
-
-    def __init__(self, model: DocumentModel, hi_lines: list[str]) -> None:
+    def __init__(self, model: AppState, hi_lines: list[str]) -> None:
         self._model = model
         self._hi_lines = hi_lines
         self._gutter_width = len(str(len(hi_lines))) + 1
-        self._match_indices: set[int] = set()
-        self._range_anchor: int | None = None
-        self._range_anchor_group: int = 1
         items = [
-            ListItem(Static(self._line_text(idx), markup=False), id=f"l{idx}")
+            ListItem(Static(self.line_text(idx), markup=False), id=f"l{idx}")
             for idx in range(len(hi_lines))
         ]
         super().__init__(*items)
 
-    def _line_text(self, idx: int) -> Text:
+    def gutter(self, idx: int) -> Text:
+        line_num = str(idx + 1).rjust(self._gutter_width)
+        highlighted = idx in set(self._model.match_indices)
+        return gutter_text(line_num, highlighted)
+
+    def indicator(self, idx: int, group: int) -> Text:
+        is_anchor = idx == self._model.range_anchor
+        return indicator_text(group, self._model.range_anchor_group, is_anchor)
+
+    def line_text(self, idx: int) -> Text:
         line = self._model.lines[idx]
         hi_text = Text.from_ansi(self._hi_lines[idx])
-
         if line.group != 0:
-            colour = GROUP_COLOURS[line.group]
-            hi_text.stylize(f"bold {colour}")
+            hi_text.stylize(f"bold {GROUP_COLOURS[line.group]}")
+        return Text.assemble(self.gutter(idx), self.indicator(idx, line.group), hi_text)
 
-        line_num = str(idx + 1).rjust(self._gutter_width)
-        gutter_style = "bold yellow" if idx in self._match_indices else "dim"
-        gutter = Text(f"{line_num} ", style=gutter_style)
+    def redraw_line(self, idx: int) -> None:
+        self.query_one(f"#l{idx} Static", Static).update(self.line_text(idx))
 
-        if line.group != 0:
-            colour = GROUP_COLOURS[line.group]
-            indicator = Text("● ", style=f"bold {colour}")
-        elif idx == self._range_anchor:
-            colour = GROUP_COLOURS[self._range_anchor_group]
-            indicator = Text("◆ ", style=f"bold {colour}")
-        else:
-            indicator = Text("  ")
-
-        return Text.assemble(gutter, indicator, hi_text)
-
-    def _redraw_line(self, idx: int) -> None:
-        self.query_one(f"#l{idx} Static", Static).update(self._line_text(idx))
-
-    def set_anchor(self, idx: int | None, group: int = 1) -> None:
-        old = self._range_anchor
-        self._range_anchor = idx
-        self._range_anchor_group = group
-        if old is not None:
-            self._redraw_line(old)
-        if idx is not None:
-            self._redraw_line(idx)
-
-    def set_matches(self, indices: set[int]) -> None:
-        old = self._match_indices
-        self._match_indices = indices
-        for idx in old.symmetric_difference(indices):
-            self._redraw_line(idx)
+    def redraw_lines(self, indices) -> None:
+        for idx in indices:
+            self.redraw_line(idx)
 
     def action_toggle_line(self) -> None:
         idx = self.index
         if idx is None:
             return
         self._model.toggle_line(idx)
-        self._redraw_line(idx)
+        self.redraw_line(idx)
         self.post_message(self.LineToggled())
 
     def on_key(self, event: events.Key) -> None:
         ch = event.character
         if ch is not None and ch.isdigit() and ch != "0":
-            self.app._set_group(int(ch))  # type: ignore[attr-defined]
+            self.app.set_group(int(ch))  # type: ignore[attr-defined]
             event.stop()
 
     @property
@@ -137,14 +166,12 @@ class LineListView(ListView):
         return self.index if self.index is not None else 0
 
 
-
-
-
 class ClipperApp(App):
     """File annotation TUI."""
 
     TITLE = "dipper"
     COMMANDS = {GroupProvider}
+    CSS_PATH = "app.tcss"
 
     BINDINGS = [
         Binding("n", "annotate", "Note"),
@@ -156,23 +183,6 @@ class ClipperApp(App):
         Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
         Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
     ]
-
-    CSS = """
-    LineListView {
-        height: 1fr;
-    }
-    #header-label {
-        height: 1;
-        background: $panel;
-        padding: 0 1;
-        color: $text-muted;
-    }
-    #status {
-        height: 1;
-        background: $panel;
-        padding: 0 1;
-    }
-    """
 
     def __init__(
         self,
@@ -186,18 +196,16 @@ class ClipperApp(App):
     ) -> None:
         super().__init__()
         lines = source.splitlines()
-        self._model = DocumentModel(
+        self._model = AppState(
             lines=[LineState(text=line) for line in lines],
             group_names=dict(group_names or {}),
         )
         self._hi_lines = highlighted_lines(source, filename)
         self._filename = filename or "<stdin>"
+        self._output_filepath = filename
         self._header = header
         self._output_lines = output_lines
         self._output_summary = output_summary
-        self._search_pattern: str = ""
-        self._match_indices: list[int] = []
-        self._match_cursor: int = 0
         if prompt is not None:
             self.sub_title = prompt
 
@@ -206,74 +214,67 @@ class ClipperApp(App):
         if self._header is not None:
             yield Label(self._header, id="header-label")
         yield LineListView(self._model, self._hi_lines)
-        yield Label(self._status_text(), id="status")
+        yield Label(self.status_text(), id="status")
         yield Footer()
 
-    def _cursor_group(self) -> int:
+    def cursor_group(self) -> int:
         try:
-            idx = self._line_view().cursor_index
+            idx = self.line_view().cursor_index
         except Exception:
             return 0
         return self._model.lines[idx].group if idx < len(self._model.lines) else 0
 
-    def _status_text(self) -> Text:
+    def append_search_section(self, result: Text) -> None:
+        pattern = self._model.search_pattern
+        if not pattern:
+            return
+        if self._model.match_indices:
+            pos = self._model.match_cursor + 1
+            total = len(self._model.match_indices)
+            result.append_text(search_hit_text(pattern, pos, total))
+        else:
+            result.append_text(search_miss_text(pattern))
+
+    def status_text(self) -> Text:
         active = self._model.active_group
-        used = sorted(self._model.selected_groups())
         result = Text(no_wrap=True, overflow="ellipsis")
-
-        active_colour = GROUP_COLOURS[active]
-        active_label = self._model.group_label(active)
-        result.append("◉ ", style=Style(color=active_colour, bold=True))
-        result.append(active_label, style=Style(color=active_colour, bold=True))
-
+        colour = GROUP_COLOURS[active]
+        result.append_text(group_dot(colour))
+        result.append(self._model.group_label(active), style=Style(color=colour, bold=True))
+        used = sorted(self._model.selected_groups())
         if used:
             result.append("  |  ", style="dim")
             for grp in used:
-                colour = GROUP_COLOURS[grp]
-                result.append("● ", style=Style(color=colour, bold=True))
-
-        if self._search_pattern:
-            if self._match_indices:
-                pos = self._match_cursor + 1
-                total = len(self._match_indices)
-                result.append(f"  |  /{self._search_pattern} [{pos}/{total}]", style="bold yellow")
-            else:
-                result.append(f"  |  /{self._search_pattern} [no matches]", style="dim yellow")
-
+                result.append_text(group_used_dot(grp))
+        self.append_search_section(result)
         result.append(f"  |  {self._filename}", style="dim")
         return result
 
-    def _refresh_status(self) -> None:
-        self.query_one("#status", Label).update(self._status_text())
+    def refresh_status(self) -> None:
+        self.query_one("#status", Label).update(self.status_text())
 
-    def _line_view(self) -> LineListView:
+    def line_view(self) -> LineListView:
         return self.query_one(LineListView)
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        self._refresh_status()
+        self.refresh_status()
 
     def on_line_list_view_line_toggled(self, event: LineListView.LineToggled) -> None:
-        self._refresh_status()
+        self.refresh_status()
 
-    def _on_rename_dismiss(self, group: int, result: str) -> None:
-        if result:
-            self._model.group_names[group] = result
-        else:
-            self._model.group_names.pop(group, None)
-        self._refresh_status()
+    def rename_done(self, group: int, result: str) -> None:
+        self._model.set_group_name(group, result)
+        self.refresh_status()
 
     def action_rename_group(self) -> None:
-        grp = self._cursor_group() or self._model.active_group
+        grp = self.cursor_group() or self._model.active_group
         existing = self._model.group_names.get(grp, "")
-        callback = functools.partial(self._on_rename_dismiss, grp)
+        callback = functools.partial(self.rename_done, grp)
         self.push_screen(RenameModal(grp, existing), callback)
 
-    def _on_annotate_dismiss(self, group: int, result: str) -> None:
-        if result:
-            self._model.set_annotation(group, result)
-        else:
-            self._model.annotations.pop(group, None)
-        self._refresh_status()
+    def annotate_done(self, group: int, result: str) -> None:
+        self._model.set_annotation(group, result)
+        self.refresh_status()
 
     def action_annotate(self) -> None:
         used = self._model.selected_groups()
@@ -282,132 +283,125 @@ class ClipperApp(App):
         group = self._model.active_group if self._model.active_group in used else min(used)
         existing = self._model.annotations[group].text if group in self._model.annotations else ""
         label = self._model.group_label(group)
-        callback = functools.partial(self._on_annotate_dismiss, group)
+        callback = functools.partial(self.annotate_done, group)
         self.push_screen(AnnotationModal(group, label, existing), callback)
 
     def action_fill_range(self) -> None:
-        lv = self._line_view()
+        lv = self.line_view()
         idx = lv.cursor_index
-        if lv._range_anchor is None:
-            lv.set_anchor(idx, self._model.active_group)
-            self._refresh_status()
+        if self._model.range_anchor is None:
+            self._model.set_range_anchor(idx)
+            lv.redraw_line(idx)
+            self.refresh_status()
         else:
-            start = min(lv._range_anchor, idx)
-            end = max(lv._range_anchor, idx)
-            for i in range(start, end + 1):
-                self._model.lines[i].group = self._model.active_group
-                lv._redraw_line(i)
-            lv.set_anchor(None)
-            self._refresh_status()
+            affected = self._model.fill_range(idx)
+            lv.redraw_lines(affected)
+            self.refresh_status()
 
     def action_write_output(self) -> None:
-        self.exit(render_output(self._model, lines=self._output_lines, summary=self._output_summary))
+        result = render_output(
+            self._model, lines=self._output_lines, summary=self._output_summary,
+            filepath=self._output_filepath,
+        )
+        self.exit(result)
 
-    def _jump_to_line(self, idx: int) -> None:
-        lv = self._line_view()
+    def jump_to_line(self, idx: int) -> None:
+        lv = self.line_view()
         lv.index = idx
         lv.scroll_to_widget(lv.query_one(f"#l{idx}"))
 
-    def _noop(self) -> None:
+    def noop(self) -> None:
         pass
 
-    def on_line_list_view_group_selected(self, event: LineListView.GroupSelected) -> None:
-        self._refresh_status()
-
-    def _open_goto_line(self) -> None:
+    def open_goto_line(self) -> None:
         def on_result(value: str | None) -> None:
             if value is None:
                 return
             try:
                 n = int(value.strip())
                 idx = max(0, min(n - 1, len(self._model.lines) - 1))
-                self._jump_to_line(idx)
+                self.jump_to_line(idx)
             except ValueError:
                 pass
         self.push_screen(CommandModal(":"), on_result)
 
-    def _open_search(self) -> None:
-        import re as _re
+    def apply_clear_search(self, lv: LineListView) -> None:
+        old_matches = set(self._model.match_indices)
+        self._model.clear_search()
+        lv.redraw_lines(old_matches)
+        self.refresh_status()
 
-        def on_result(value: str | None) -> None:
-            if value is None:
-                return
-            if not value:
-                self._search_pattern = ""
-                self._match_indices = []
-                self._match_cursor = 0
-                self._line_view().set_matches(set())
-                self._refresh_status()
-                return
-            try:
-                pattern = _re.compile(value, _re.IGNORECASE)
-            except _re.error:
-                return
-            self._search_pattern = value
-            self._match_indices = [
-                idx for idx, line in enumerate(self._model.lines)
-                if pattern.search(line.text)
-            ]
-            self._match_cursor = 0
-            self._line_view().set_matches(set(self._match_indices))
-            self._refresh_status()
-            if self._match_indices:
-                self._jump_to_line(self._match_indices[0])
-
-        self.push_screen(CommandModal("/"), on_result)
-
-    def _next_match(self) -> None:
-        if not self._match_indices:
+    def apply_search(self, lv: LineListView, value: str) -> None:
+        try:
+            pattern = _re.compile(value, _re.IGNORECASE)
+        except _re.error:
             return
-        self._match_cursor = (self._match_cursor + 1) % len(self._match_indices)
-        self._jump_to_line(self._match_indices[self._match_cursor])
-        self._refresh_status()
+        old_matches = set(self._model.match_indices)
+        indices = [idx for idx, line in enumerate(self._model.lines) if pattern.search(line.text)]
+        self._model.set_search(value, indices)
+        lv.redraw_lines(old_matches.symmetric_difference(set(indices)))
+        self.refresh_status()
+        if indices:
+            self.jump_to_line(indices[0])
 
-    def _prev_match(self) -> None:
-        if not self._match_indices:
+    def search_result(self, value: str | None) -> None:
+        if value is None:
             return
-        self._match_cursor = (self._match_cursor - 1) % len(self._match_indices)
-        self._jump_to_line(self._match_indices[self._match_cursor])
-        self._refresh_status()
+        lv = self.line_view()
+        if not value:
+            self.apply_clear_search(lv)
+        else:
+            self.apply_search(lv, value)
 
-    def _select_all_matches(self) -> None:
-        if not self._match_indices:
-            return
-        lv = self._line_view()
-        group = self._model.active_group
-        for idx in self._match_indices:
-            self._model.lines[idx].group = group
-            lv._redraw_line(idx)
-        self._refresh_status()
+    def next_match(self) -> None:
+        idx = self._model.next_match()
+        if idx is not None:
+            self.jump_to_line(idx)
+            self.refresh_status()
+
+    def prev_match(self) -> None:
+        idx = self._model.prev_match()
+        if idx is not None:
+            self.jump_to_line(idx)
+            self.refresh_status()
+
+    def select_all_matches(self) -> None:
+        changed = self._model.select_all_matches()
+        if changed:
+            self.line_view().redraw_lines(changed)
+            self.refresh_status()
 
     def action_goto_line(self) -> None:
-        self._open_goto_line()
+        self.open_goto_line()
 
     def action_search(self) -> None:
-        self._open_search()
+        self.push_screen(CommandModal("/"), self.search_result)
 
     def action_next_match(self) -> None:
-        self._next_match()
+        self.next_match()
 
     def action_prev_match(self) -> None:
-        self._prev_match()
+        self.prev_match()
 
     def on_key(self, event: events.Key) -> None:
         ch = event.character
         if ch == "g":
-            self._jump_to_line(0)
+            self.jump_to_line(0)
             event.stop()
         elif ch == "G":
-            self._jump_to_line(len(self._model.lines) - 1)
+            self.jump_to_line(len(self._model.lines) - 1)
             event.stop()
         elif ch == "*":
-            self._select_all_matches()
+            self.select_all_matches()
             event.stop()
 
-    def _set_group(self, group: int) -> None:
-        self._model.active_group = group
-        self._line_view().set_anchor(None)
-        self._refresh_status()
+    def set_group(self, group: int) -> None:
+        old_anchor = self._model.range_anchor
+        self._model.active_group = group  # validated; clears anchor
+        lv = self.line_view()
+        if old_anchor is not None:
+            lv.redraw_line(old_anchor)
+        self.refresh_status()
 
 
 def run(
@@ -420,8 +414,10 @@ def run(
     output_summary: bool = False,
     output_path: str | None = None,
 ) -> None:
-    app = ClipperApp(source, filename, prompt=prompt, header=header, group_names=group_names,
-                     output_lines=output_lines, output_summary=output_summary)
+    app = ClipperApp(
+        source, filename, prompt=prompt, header=header,
+        group_names=group_names, output_lines=output_lines, output_summary=output_summary,
+    )
     result = app.run()
     if result:
         if output_path:

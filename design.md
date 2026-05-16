@@ -260,3 +260,57 @@ The flags are additive. Each one independently includes its section in the outpu
 - Neither flag affects the TUI — output mode is applied at write time when `w` is pressed.
 - Both flags still respect `--groups`, `--header-group`, and all other selection flags.
 - If no lines are selected, both flags produce empty output.
+
+---
+
+## Metadata section
+
+### Problem
+
+Dipper output is typically piped into another tool or stored as a file. Without the source filepath embedded in the output, a consumer cannot know which file was annotated — the origin is lost the moment the file is written or passed through a pipeline.
+
+### Design
+
+A metadata block is prepended to every dipper output. Each metadata line follows the existing `%%dipper:<type>:<data>%%` grammar:
+
+```
+%%dipper:meta:filepath:<path>%%
+```
+
+`filepath` holds the path exactly as passed to dipper on the CLI (relative or absolute). The line appears as the **first line** of the output, before any source content.
+
+Full output structure with metadata:
+
+```
+%%dipper:meta:filepath:dipper/app.py%%
+original line of code here
+%%dipper:mark:1:1%% ^^^^^^^^^^^^^^^^^^^
+next line
+
+%%dipper:separator%%
+
+%%dipper:group:1:1%% bug
+Note about the bug
+```
+
+**Output modes**
+
+The metadata line is written in every output mode, including `--lines` and `--summary`. This is especially important for `--summary`, where the body is absent and the filepath is the only way to locate the source.
+
+| Flags | Output |
+|---|---|
+| neither | metadata, then full annotated file |
+| `--lines` | metadata, then selected lines + marks |
+| `--summary` | metadata, then summary block |
+| `--lines --summary` | metadata, then selected lines + marks, then summary block |
+
+**Stdin**
+
+When dipper reads from stdin and no `--file` path was given, the metadata line is omitted entirely — there is no meaningful filepath to record.
+
+### Constraints
+
+- The metadata line must be the first line of output so consumers can extract it with a single `head -1` or by reading until the first non-metadata line.
+- The `filepath` value is not escaped or quoted; paths with spaces are written as-is, relying on the surrounding `%%` delimiters to bound the value.
+- The metadata line matches the existing machine-readable pattern `^%%dipper:[^%]+%%` and is stripped along with all other dipper markers when recovering the original source.
+- No metadata line is written when reading from stdin without a named file.

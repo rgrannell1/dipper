@@ -3,6 +3,7 @@
 from dipper.constants import (
     GROUP_FORMAT,
     MARK_FORMAT,
+    META_FILEPATH_FORMAT,
     SEPARATOR_LINE,
     UNDERLINE_CHAR,
     UNDERLINE_MIN,
@@ -10,12 +11,12 @@ from dipper.constants import (
 from dipper.model import DocumentModel
 
 
-def _format_range(start: int, end: int) -> str:
+def format_range(start: int, end: int) -> str:
     return f"{start}-{end}" if start != end else str(start)
 
 
-def _encode_ranges(line_numbers: list[int]) -> str:
-    # Compress a list of 1-based line numbers into minimal contiguous range notation, e.g. [1,2,3,7] → "1-3,7"
+def encode_ranges(line_numbers: list[int]) -> str:
+    # Compress 1-based line numbers into range notation, e.g. [1,2,3,7] → "1-3,7"
     if not line_numbers:
         return ""
     sorted_nums = sorted(line_numbers)
@@ -25,23 +26,23 @@ def _encode_ranges(line_numbers: list[int]) -> str:
         if num == end + 1:
             end = num
         else:
-            ranges.append(_format_range(start, end))
+            ranges.append(format_range(start, end))
             start = end = num
-    ranges.append(_format_range(start, end))
+    ranges.append(format_range(start, end))
     return ",".join(ranges)
 
 
-def _mark_line(text: str, group: int, line_number: int) -> str:
+def mark_line(text: str, group: int, line_number: int) -> str:
     underline = UNDERLINE_CHAR * max(len(text), UNDERLINE_MIN)
     return MARK_FORMAT.format(group=group, line=line_number, underline=underline)
 
 
-def _group_header(group: int, name: str | None, ranges: str) -> str:
+def group_header(group: int, name: str | None, ranges: str) -> str:
     header = GROUP_FORMAT.format(group=group, ranges=ranges)
     return f"{header} {name}" if name else header
 
 
-def _collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
+def collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
     """Return (body_lines, group_line_numbers) from the model."""
     body_lines: list[str] = []
     group_line_numbers: dict[int, list[int]] = {}
@@ -49,54 +50,64 @@ def _collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
         body_lines.append(line.text)
         if line.group != 0:
             line_number = idx + 1
-            body_lines.append(_mark_line(line.text, line.group, line_number))
+            body_lines.append(mark_line(line.text, line.group, line_number))
             group_line_numbers.setdefault(line.group, []).append(line_number)
     return body_lines, group_line_numbers
 
 
-def _build_summary(model: DocumentModel, group_line_numbers: dict[int, list[int]]) -> list[str]:
+def build_summary(model: DocumentModel, group_line_numbers: dict[int, list[int]]) -> list[str]:
     used_groups = sorted(model.selected_groups())
     summary: list[str] = []
     for group in used_groups:
         annotation = model.annotations.get(group)
         annotation_text = annotation.text if annotation else ""
         name = model.group_names.get(group)
-        ranges = _encode_ranges(group_line_numbers.get(group, []))
-        summary.append(_group_header(group, name, ranges))
+        ranges = encode_ranges(group_line_numbers.get(group, []))
+        summary.append(group_header(group, name, ranges))
         summary.append(annotation_text)
         summary.append("")
     return summary
+
+
+def render_full(
+    model: DocumentModel, body_lines: list[str], group_line_numbers: dict[int, list[int]]
+) -> str:
+    if not model.selected_groups():
+        return "\n".join(body_lines)
+    summary_block = ["", SEPARATOR_LINE, ""] + build_summary(model, group_line_numbers)
+    return "\n".join(body_lines + summary_block)
+
+
+def render_selected_lines(model: DocumentModel) -> str:
+    out: list[str] = []
+    for idx, line in enumerate(model.lines):
+        if line.group != 0:
+            out.append(line.text)
+            out.append(mark_line(line.text, line.group, idx + 1))
+    return "\n".join(out)
 
 
 def render_output(
     model: DocumentModel,
     lines: bool = False,
     summary: bool = False,
+    filepath: str | None = None,
 ) -> str:
-    body_lines, group_line_numbers = _collect(model)
-    used_groups = sorted(model.selected_groups())
+    meta = META_FILEPATH_FORMAT.format(filepath=filepath) if filepath else None
+    body_lines, group_line_numbers = collect(model)
 
     if not lines and not summary:
-        if not used_groups:
-            return "\n".join(body_lines)
-        summary_block = ["", SEPARATOR_LINE, ""] + _build_summary(model, group_line_numbers)
-        return "\n".join(body_lines + summary_block)
+        body = render_full(model, body_lines, group_line_numbers)
+        return f"{meta}\n{body}" if meta else body
 
-    parts: list[str] = []
-
+    content_parts: list[str] = []
     if lines:
-        lines_out: list[str] = []
-        for idx, line in enumerate(model.lines):
-            if line.group != 0:
-                line_number = idx + 1
-                lines_out.append(line.text)
-                lines_out.append(_mark_line(line.text, line.group, line_number))
-        if lines_out:
-            parts.append("\n".join(lines_out))
-
+        selected = render_selected_lines(model)
+        if selected:
+            content_parts.append(selected)
     if summary:
-        summary_block = _build_summary(model, group_line_numbers)
+        summary_block = build_summary(model, group_line_numbers)
         if summary_block:
-            parts.append("\n".join(summary_block))
-
-    return "\n\n".join(parts)
+            content_parts.append("\n".join(summary_block))
+    content = "\n\n".join(content_parts)
+    return f"{meta}\n{content}" if meta else content

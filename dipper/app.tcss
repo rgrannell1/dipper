@@ -1,0 +1,16 @@
+LineListView {
+    height: 1fr;
+}
+
+#header-label {
+    height: 1;
+    background: $panel;
+    padding: 0 1;
+    color: $text-muted;
+}
+
+#status {
+    height: 1;
+    background: $panel;
+    padding: 0 1;
+}

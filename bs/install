@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec uv tool install /home/rg/Code/dipper --force --reinstall "$@"

@@ -18,8 +18,11 @@ UNDERLINE_MIN = 6
 # Separator between annotated body and group summary
 SEPARATOR_LINE = "%%dipper:separator%%"
 
-# Group header line in the summary section; RANGES is comma-separated run-length encoded line numbers
+# Group header line in the summary section; RANGES is comma-separated run-length encoded ranges
 GROUP_FORMAT = "%%dipper:group:{group}:{ranges}%%"
+
+# Metadata line emitted as the first line of output when a source filepath is known
+META_FILEPATH_FORMAT = "%%dipper:meta:filepath:{filepath}%%"
 
 # Colours for groups 1–9, indexed by group number (1-based, index 0 unused)
 GROUP_COLOURS = [

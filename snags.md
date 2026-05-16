@@ -32,6 +32,7 @@
 - [x] #30 `fixed` — Switching to a different group while a range anchor is set does not clear the anchor; the stale anchor marker (◆) remains visible and the fill will use the wrong group.
 - [ ] #25 `wontfix` — `--preset priorities` only shows group 1 labelled `p1`; groups p2–p5 are missing. Could not reproduce.
 - [ ] #31 `open` — Two blocks of the same group separated only by blank lines are not treated as contiguous in the output; they produce separate line ranges instead of one spanning range.
+- [ ] #32 `open` — Pressing `f` twice on the same line crashes the TUI.
 
 ## Passing
 

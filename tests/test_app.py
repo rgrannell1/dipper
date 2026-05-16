@@ -399,8 +399,7 @@ class TestRangeFill:
     async def test_f_sets_anchor_on_current_line(self):
         async with make_app().run_test() as pilot:
             await pilot.press("f")
-            lv = pilot.app.query_one(LineListView)
-            assert lv._range_anchor == 0
+            assert pilot.app._model.range_anchor == 0
 
     async def test_f_twice_fills_range_into_active_group(self):
         async with make_app().run_test() as pilot:
@@ -418,8 +417,7 @@ class TestRangeFill:
             await pilot.press("f")
             await pilot.press("down")
             await pilot.press("f")
-            lv = pilot.app.query_one(LineListView)
-            assert lv._range_anchor is None
+            assert pilot.app._model.range_anchor is None
 
     async def test_f_fill_respects_active_group(self):
         async with make_app().run_test() as pilot:
@@ -448,8 +446,7 @@ class TestRangeFill:
         async with make_app().run_test() as pilot:
             await pilot.press("f")
             await pilot.press("2")
-            lv = pilot.app.query_one(LineListView)
-            assert lv._range_anchor is None
+            assert pilot.app._model.range_anchor is None
 
 
 class TestRenderedUI:
@@ -479,3 +476,41 @@ class TestRenderedUI:
             status = pilot.app.query_one("#status", Label)
             text = status.render_line(0).text
             assert "<stdin>" in text
+
+
+class TestMetadataFilepath:
+    async def test_filepath_metadata_line_present_when_filename_given(self):
+        app = ClipperApp(SOURCE, "some/file.py")
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        output = app._return_value
+        assert output.startswith("%%dipper:meta:filepath:some/file.py%%")
+
+    async def test_filepath_metadata_line_absent_when_no_filename(self):
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        output = app._return_value
+        assert "%%dipper:meta:filepath:" not in output
+
+    async def test_filepath_metadata_first_line_in_lines_mode(self):
+        app = ClipperApp(SOURCE, "src/main.py", output_lines=True)
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        output = app._return_value
+        assert output.startswith("%%dipper:meta:filepath:src/main.py%%")
+
+    async def test_filepath_metadata_first_line_in_summary_mode(self):
+        app = ClipperApp(SOURCE, "src/main.py", output_summary=True)
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        output = app._return_value
+        assert output.startswith("%%dipper:meta:filepath:src/main.py%%")

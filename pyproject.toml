@@ -20,5 +20,17 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["dipper*"]
 
+[tool.setuptools.package-data]
+dipper = ["modals/*.tcss", "*.tcss"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "PLR0915"]
+
+[tool.ruff.lint.pylint]
+max-statements = 14
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
