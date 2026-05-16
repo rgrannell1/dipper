@@ -64,6 +64,17 @@ def validate_files_flags(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def validate_full_flags(args: argparse.Namespace) -> None:
+    if not args.full:
+        return
+    if args.lines or args.summary:
+        print("dipper: --full is mutually exclusive with --lines and --summary", file=sys.stderr)
+        sys.exit(1)
+    if args.json:
+        print("dipper: --full is mutually exclusive with --json", file=sys.stderr)
+        sys.exit(1)
+
+
 def validate_output_flags(args: argparse.Namespace) -> None:
     text_mode = args.lines or args.summary
     if args.json and text_mode:
@@ -72,6 +83,7 @@ def validate_output_flags(args: argparse.Namespace) -> None:
     if args.load and not args.file:
         print("dipper: --load requires a file argument", file=sys.stderr)
         sys.exit(1)
+    validate_full_flags(args)
     validate_files_flags(args)
 
 
@@ -87,6 +99,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Comma-separated group names")
     parser.add_argument("--preset", metavar="NAME", default=None,
                         help="Named group preset from config file")
+    parser.add_argument("--full", action="store_true", default=False,
+                        help="Output full annotated file (default is compact: lines + summary)")
     parser.add_argument("--lines", action="store_true", default=False,
                         help="Output selected lines with marks only")
     parser.add_argument("--summary", action="store_true", default=False,
@@ -136,6 +150,6 @@ def main() -> None:
         run(
             source, filename,
             prompt=args.prompt, header=args.header, group_names=group_names,
-            output_lines=args.lines, output_summary=args.summary, output_json=args.json,
+            output_lines=args.lines, output_summary=args.summary, output_json=args.json, output_full=args.full,
             output_path=output_path, load_path=args.load,
         )

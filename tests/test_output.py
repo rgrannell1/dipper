@@ -17,8 +17,14 @@ def select(model: DocumentModel, idx: int, group: int = 1) -> None:
 
 class TestNoSelections:
     def test_original_lines_reproduced(self):
+        """Proves full mode with no selections reproduces the source verbatim."""
         model = make_model("foo", "bar")
-        assert render_output(model) == "foo\nbar"
+        assert render_output(model, full=True) == "foo\nbar"
+
+    def test_default_compact_with_no_selections_is_empty(self):
+        """Proves compact default with no selections produces empty output."""
+        model = make_model("foo", "bar")
+        assert render_output(model) == ""
 
     def test_no_separator_or_markers(self):
         model = make_model("foo", "bar")
@@ -71,9 +77,10 @@ class TestMarkLine:
         assert len(underline) == len(text)
 
     def test_unselected_line_has_no_mark(self):
+        """Proves unselected lines appear without a mark in full mode."""
         model = make_model("a", "b")
         select(model, 0)
-        lines = render_output(model).splitlines()
+        lines = render_output(model, full=True).splitlines()
         b_idx = lines.index("b")
         is_last_line = b_idx == len(lines) - 1
         if not is_last_line:
@@ -81,19 +88,27 @@ class TestMarkLine:
 
 
 class TestSeparator:
-    def test_separator_present_when_groups_used(self):
+    def test_separator_present_in_full_mode_when_groups_used(self):
+        """Proves separator appears in --full mode when lines are selected."""
         model = make_model("a")
         select(model, 0)
-        assert SEPARATOR_LINE in render_output(model)
+        assert SEPARATOR_LINE in render_output(model, full=True)
+
+    def test_separator_absent_in_compact_mode(self):
+        """Proves compact default never emits the separator line."""
+        model = make_model("a")
+        select(model, 0)
+        assert SEPARATOR_LINE not in render_output(model)
 
     def test_separator_absent_when_no_groups(self):
         model = make_model("a")
         assert SEPARATOR_LINE not in render_output(model)
 
     def test_body_before_separator(self):
+        """Proves full-file body appears before the separator in --full mode."""
         model = make_model("line1")
         select(model, 0)
-        out = render_output(model)
+        out = render_output(model, full=True)
         sep_pos = out.index(SEPARATOR_LINE)
         assert out.index("line1") < sep_pos
 

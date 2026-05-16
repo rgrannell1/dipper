@@ -170,13 +170,23 @@ class TestWriteAndQuit:
             await pilot.pause()
         assert DIPPER_PREFIX in app._return_value
 
-    async def test_q_output_contains_separator(self):
-        app = make_app()
+    async def test_q_output_contains_separator_in_full_mode(self):
+        """Proves separator only appears in --full mode, not the compact default."""
+        app = make_app(output_full=True)
         async with app.run_test() as pilot:
             await pilot.press("tab")
             await pilot.press("q")
             await pilot.pause()
         assert SEPARATOR_LINE in app._return_value
+
+    async def test_q_default_output_omits_separator(self):
+        """Proves default compact output excludes the separator and full source body."""
+        app = make_app()
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        assert SEPARATOR_LINE not in app._return_value
 
 
 class TestAnnotationModal:
@@ -391,7 +401,7 @@ class TestWorkflow:
             await pilot.pause()
         output = app._return_value
         assert "%%dipper:mark:1:1%%" in output
-        assert SEPARATOR_LINE in output
+        assert SEPARATOR_LINE not in output
         assert "%%dipper:group:1:1%% findings" in output
         assert "check this" in output
 

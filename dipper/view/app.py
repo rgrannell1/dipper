@@ -45,6 +45,7 @@ class ClipperApp(App):
         output_lines: bool = False,
         output_summary: bool = False,
         output_json: bool = False,
+        output_full: bool = False,
         load_path: str | None = None,
         theme: str = DEFAULT_THEME,
     ) -> None:
@@ -64,6 +65,7 @@ class ClipperApp(App):
         self._header = header
         self._output_lines = output_lines
         self._output_summary = output_summary
+        self._output_full = output_full
         self._output_json = output_json
         self.register_theme(theme_entry["textual"])
         self.theme = theme_entry["textual"].name
@@ -140,7 +142,7 @@ class ClipperApp(App):
         else:
             result = render_output(
                 self._model, lines=self._output_lines, summary=self._output_summary,
-                filepath=self._output_filepath,
+                full=self._output_full, filepath=self._output_filepath,
             )
         self.exit(result)
 
@@ -176,6 +178,7 @@ def run(  # noqa: PLR0913
     output_lines: bool = False,
     output_summary: bool = False,
     output_json: bool = False,
+    output_full: bool = False,
     output_path: str | None = None,
     load_path: str | None = None,
     theme: str = DEFAULT_THEME,
@@ -183,7 +186,7 @@ def run(  # noqa: PLR0913
     app = ClipperApp(
         source, filename, prompt=prompt, header=header,
         group_names=group_names, output_lines=output_lines, output_summary=output_summary,
-        output_json=output_json, load_path=load_path, theme=theme,
+        output_json=output_json, output_full=output_full, load_path=load_path, theme=theme,
     )
     result = app.run()
     if result:

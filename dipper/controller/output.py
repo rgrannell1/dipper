@@ -134,16 +134,21 @@ def render_json(model: DocumentModel, filepath: str | None) -> str:
     return json.dumps({"filepath": filepath, "groups": groups}, indent=2)
 
 
-def render_output(
+def render_output(  # noqa: PLR0913, PLR0917
     model: DocumentModel,
     lines: bool = False,
     summary: bool = False,
+    full: bool = False,
     filepath: str | None = None,
 ) -> str:
     meta = META_FILEPATH_FORMAT.format(filepath=filepath) if filepath else None  # type: ignore
     body_lines, _ = collect(model)
 
-    if not lines and not summary:
+    if full:
         return prepend_meta(render_full(model, body_lines), meta)
 
-    return prepend_meta(render_filtered(model, lines, summary), meta)
+    if lines or summary:
+        return prepend_meta(render_filtered(model, lines, summary), meta)
+
+    # default: compact — selected lines + marks, then summary block
+    return prepend_meta(render_filtered(model, lines=True, summary=True), meta)
