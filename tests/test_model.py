@@ -1,5 +1,6 @@
 import pytest
-from dipper.model import DocumentModel, GroupAnnotation, LineState
+from dipper.model import DocumentModel
+from dipper.state import GroupAnnotation, LineState
 
 
 def make_model(*texts: str, active_group: int = 1) -> DocumentModel:

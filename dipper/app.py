@@ -8,7 +8,8 @@ from textual.widgets import Footer, Header, Label, ListView
 from textual import events
 
 from dipper.highlight import highlighted_lines
-from dipper.model import AppState, LineState
+from dipper.model import AppState
+from dipper.state import LineState
 from dipper.output import render_output
 from dipper.modals import AnnotationModal, CommandModal, GroupsModal, RenameModal
 from dipper.view import GroupProvider, LineListView, status_bar_text
