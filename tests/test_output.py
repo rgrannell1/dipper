@@ -1,8 +1,8 @@
 import re
 import pytest
-from dipper.constants import DIPPER_PREFIX, SEPARATOR_LINE, UNDERLINE_MIN
-from dipper.state import DocumentModel, LineState
-from dipper.output import render_output, encode_ranges
+from dipper.commons.constants import DIPPER_PREFIX, SEPARATOR_LINE, UNDERLINE_MIN
+from dipper.model.state import DocumentModel, LineState
+from dipper.controller.output import render_output, encode_ranges
 
 
 def make_model(*texts: str) -> DocumentModel:

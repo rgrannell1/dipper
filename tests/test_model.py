@@ -1,5 +1,5 @@
 import pytest
-from dipper.state import DocumentModel, GroupAnnotation, LineState, nearest_annotated_group, selected_groups
+from dipper.model.state import DocumentModel, GroupAnnotation, LineState, nearest_annotated_group, selected_groups
 
 
 def make_model(*texts: str, active_group: int = 1) -> DocumentModel:

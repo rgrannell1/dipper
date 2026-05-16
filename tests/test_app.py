@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from textual.widgets import Input, Label
 
-from dipper.app import ClipperApp, LineListView, run
-from dipper.constants import DIPPER_PREFIX, SEPARATOR_LINE
+from dipper.view.app import ClipperApp, LineListView, run
+from dipper.commons.constants import DIPPER_PREFIX, SEPARATOR_LINE
 
 
 SOURCE = "alpha\nbeta\ngamma"
@@ -111,14 +111,14 @@ class TestReset:
 
 class TestGroupsOverview:
     async def test_o_opens_groups_modal(self):
-        from dipper.modals.groups import GroupsModal
+        from dipper.view.modals.groups import GroupsModal
         async with make_app().run_test() as pilot:
             await pilot.press("o")
             await pilot.pause()
             assert isinstance(pilot.app.screen, GroupsModal)
 
     async def test_modal_shows_all_nine_groups(self):
-        from dipper.modals.groups import GroupsModal
+        from dipper.view.modals.groups import GroupsModal
         from textual.widgets import ListView
         async with make_app().run_test() as pilot:
             await pilot.press("o")
@@ -147,7 +147,7 @@ class TestGroupsOverview:
             assert model.groups.names.get(2, "") == "notes"
 
     async def test_escape_closes_modal(self):
-        from dipper.modals.groups import GroupsModal
+        from dipper.view.modals.groups import GroupsModal
         async with make_app().run_test() as pilot:
             await pilot.press("o")
             await pilot.pause()

@@ -4,9 +4,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from dipper.app import run
-from dipper.config import config_path, parse_config
-from dipper.constants import BUILTIN_PRESETS
+from dipper.commons.config import config_path, parse_config
+from dipper.commons.constants import BUILTIN_PRESETS
+from dipper.view.app import run
 
 
 def resolve_groups(args: argparse.Namespace, presets: dict[str, str]) -> str | None:
