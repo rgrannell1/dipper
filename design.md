@@ -263,6 +263,33 @@ The flags are additive. Each one independently includes its section in the outpu
 
 ---
 
+## `x` — reset all state
+
+Pressing `x` clears every piece of mutable session state and returns the document to the same condition it was in at startup.
+
+### What gets cleared
+
+| State | Reset to |
+|---|---|
+| Line selections (`line.group` for every line) | `0` (unselected) |
+| Annotations (`_annotations`) | empty dict |
+| Group names (`_group_names`) | empty dict (labels fall back to `"group N"`) |
+| Active group | `1` |
+| Range anchor | `None` |
+| Search pattern and match list | `""` / `[]` |
+
+### Motivation
+
+A reviewer who wants to start over without quitting and relaunching dipper currently has no way to do so. Toggling lines one-by-one is impractical on a large file. `x` provides a single-keystroke escape hatch.
+
+### Constraints
+
+- `x` must not write any output; it only mutates in-memory state.
+- The cursor position is preserved — only selections and metadata are reset, not the scroll position.
+- No confirmation prompt. The action is immediately reversible by re-selecting lines.
+
+---
+
 ## Metadata section
 
 ### Problem

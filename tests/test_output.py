@@ -2,7 +2,7 @@ import re
 import pytest
 from dipper.constants import DIPPER_PREFIX, SEPARATOR_LINE, UNDERLINE_MIN
 from dipper.model import DocumentModel, LineState
-from dipper.output import render_output, _encode_ranges
+from dipper.output import render_output, encode_ranges
 
 
 def make_model(*texts: str) -> DocumentModel:
@@ -187,22 +187,22 @@ class TestMultipleGroups:
 
 class TestEncodeRanges:
     def test_single_line(self):
-        assert _encode_ranges([5]) == "5"
+        assert encode_ranges([5]) == "5"
 
     def test_contiguous_run(self):
-        assert _encode_ranges([3, 4, 5]) == "3-5"
+        assert encode_ranges([3, 4, 5]) == "3-5"
 
     def test_isolated_lines(self):
-        assert _encode_ranges([1, 3, 5, 7]) == "1,3,5,7"
+        assert encode_ranges([1, 3, 5, 7]) == "1,3,5,7"
 
     def test_mixed_ranges(self):
-        assert _encode_ranges([3, 4, 5, 10, 11, 20]) == "3-5,10-11,20"
+        assert encode_ranges([3, 4, 5, 10, 11, 20]) == "3-5,10-11,20"
 
     def test_unsorted_input_sorted_in_output(self):
-        assert _encode_ranges([10, 1, 5]) == "1,5,10"
+        assert encode_ranges([10, 1, 5]) == "1,5,10"
 
     def test_empty_list(self):
-        assert _encode_ranges([]) == ""
+        assert encode_ranges([]) == ""
 
 
 class TestLinesFlag:

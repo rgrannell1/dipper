@@ -169,6 +169,17 @@ class AppState:
         self._match_cursor = (self._match_cursor - 1) % len(self._match_indices)
         return self._match_indices[self._match_cursor]
 
+    def reset(self) -> None:
+        """Reset all session state to initial values. Cursor position is not affected."""
+        for line in self._lines:
+            line.group = 0
+        self._annotations.clear()
+        self._group_names.clear()
+        self._active_group = 1
+        self._range_anchor = None
+        self._range_anchor_group = 1
+        self.clear_search()
+
     def select_all_matches(self) -> list[int]:
         """Assign all matched lines to active_group. Returns list of changed indices."""
         changed = list(self._match_indices)

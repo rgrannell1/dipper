@@ -42,6 +42,10 @@ def group_header(group: int, name: str | None, ranges: str) -> str:
     return f"{header} {name}" if name else header
 
 
+def prepend_meta(text: str, meta: str | None) -> str:
+    return f"{meta}\n{text}" if meta else text
+
+
 def collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
     """Return (body_lines, group_line_numbers) from the model."""
     body_lines: list[str] = []
@@ -50,6 +54,7 @@ def collect(model: DocumentModel) -> tuple[list[str], dict[int, list[int]]]:
         body_lines.append(line.text)
         if line.group != 0:
             line_number = idx + 1
+            # underline marker so downstream tooling can locate each annotated line
             body_lines.append(mark_line(line.text, line.group, line_number))
             group_line_numbers.setdefault(line.group, []).append(line_number)
     return body_lines, group_line_numbers
@@ -87,6 +92,25 @@ def render_selected_lines(model: DocumentModel) -> str:
     return "\n".join(out)
 
 
+def render_filtered(
+    model: DocumentModel,
+    group_line_numbers: dict[int, list[int]],
+    lines: bool,
+    summary: bool,
+) -> str:
+    """Render only the requested sections (selected lines, summary, or both)."""
+    content_parts: list[str] = []
+    if lines:
+        selected = render_selected_lines(model)
+        if selected:
+            content_parts.append(selected)
+    if summary:
+        summary_block = build_summary(model, group_line_numbers)
+        if summary_block:
+            content_parts.append("\n".join(summary_block))
+    return "\n\n".join(content_parts)
+
+
 def render_output(
     model: DocumentModel,
     lines: bool = False,
@@ -97,17 +121,6 @@ def render_output(
     body_lines, group_line_numbers = collect(model)
 
     if not lines and not summary:
-        body = render_full(model, body_lines, group_line_numbers)
-        return f"{meta}\n{body}" if meta else body
+        return prepend_meta(render_full(model, body_lines, group_line_numbers), meta)
 
-    content_parts: list[str] = []
-    if lines:
-        selected = render_selected_lines(model)
-        if selected:
-            content_parts.append(selected)
-    if summary:
-        summary_block = build_summary(model, group_line_numbers)
-        if summary_block:
-            content_parts.append("\n".join(summary_block))
-    content = "\n\n".join(content_parts)
-    return f"{meta}\n{content}" if meta else content
+    return prepend_meta(render_filtered(model, group_line_numbers, lines, summary), meta)

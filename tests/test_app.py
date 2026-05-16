@@ -65,6 +65,47 @@ class TestNumberKeys:
                 assert pilot.app._model.active_group == n
 
 
+class TestReset:
+    async def test_x_clears_all_line_selections(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("down")
+            await pilot.press("tab")
+            await pilot.press("x")
+            groups = [line.group for line in pilot.app._model.lines]
+            assert groups == [0, 0, 0]
+
+    async def test_x_resets_active_group_to_1(self):
+        async with make_app().run_test() as pilot:
+            await pilot.press("3")
+            await pilot.press("x")
+            assert pilot.app._model.active_group == 1
+
+    async def test_x_clears_annotations_and_group_names(self):
+        async with make_app().run_test() as pilot:
+            model = pilot.app._model
+            model.set_annotation(1, "note")
+            model.set_group_name(1, "bugs")
+            await pilot.press("x")
+            assert model.annotations == {}
+            assert model.group_names == {}
+
+    async def test_x_clears_range_anchor(self):
+        async with make_app().run_test() as pilot:
+            model = pilot.app._model
+            model.set_range_anchor(0)
+            await pilot.press("x")
+            assert model.range_anchor is None
+
+    async def test_x_clears_search_state(self):
+        async with make_app().run_test() as pilot:
+            model = pilot.app._model
+            model.set_search("alpha", [0])
+            await pilot.press("x")
+            assert model.search_pattern == ""
+            assert model.match_indices == []
+
+
 class TestWriteAndQuit:
     async def test_q_exits_with_output_string(self):
         app = make_app()
