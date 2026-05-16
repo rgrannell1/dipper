@@ -4,6 +4,10 @@
 
 Interactive file annotation.
 
+## Name
+
+Dipper is named after a common river-bird here in Ireland. It was named this for no reason at all, but I suppose you could find some metaphoric connection to dipping into streams selectively.
+
 ## Installation
 
 Clone the repository and install with `uv`:

@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dipper.app import ClipperApp
+    from dipper.view.app import ClipperApp
 
 from textual.css.query import NoMatches
 
-from dipper.modals import CommandModal
+from dipper.view.modals import CommandModal
 
 
 def jump_to_line(app: ClipperApp, idx: int) -> None:

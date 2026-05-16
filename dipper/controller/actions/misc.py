@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dipper.app import ClipperApp
+    from dipper.view.app import ClipperApp
 
-from dipper.modals import GroupsModal
+from dipper.view.modals import GroupsModal
 
 
 def reset(app: ClipperApp) -> None:

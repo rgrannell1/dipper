@@ -6,6 +6,7 @@ from pathlib import Path
 
 from dipper.commons.config import config_path, parse_config
 from dipper.commons.constants import BUILTIN_PRESETS
+from dipper.commons.help import print_help
 from dipper.view.app import run
 
 
@@ -35,7 +36,7 @@ def read_source(
     if args.file:
         return Path(args.file).read_text(), args.file
     if sys.stdin.isatty():
-        parser.print_usage(sys.stderr)
+        print_help()
         sys.exit(1)
     return sys.stdin.read(), None
 

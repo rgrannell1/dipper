@@ -10,10 +10,10 @@ from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import ListView, Static
 
-from dipper.constants import GROUP_COUNT
-from dipper.modals.rename import RenameModal
-from dipper.state import AppState
-from dipper.view import group_row_item, group_row_text
+from dipper.commons.constants import GROUP_COUNT
+from dipper.model.state import AppState
+from dipper.view.modals.rename import RenameModal
+from dipper.view.render import group_row_item, group_row_text
 
 
 class GroupsModal(ModalScreen[None]):

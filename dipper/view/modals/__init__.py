@@ -1,8 +1,8 @@
 """Exports all modal screens."""
 
-from dipper.modals.annotation import AnnotationModal
-from dipper.modals.command import CommandModal
-from dipper.modals.groups import GroupsModal
-from dipper.modals.rename import RenameModal
+from dipper.view.modals.annotation import AnnotationModal
+from dipper.view.modals.command import CommandModal
+from dipper.view.modals.groups import GroupsModal
+from dipper.view.modals.rename import RenameModal
 
 __all__ = ["AnnotationModal", "CommandModal", "GroupsModal", "RenameModal"]

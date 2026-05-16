@@ -8,9 +8,9 @@ from textual.binding import Binding
 from textual.message import Message
 from textual.widgets import ListItem, ListView, Static
 
-from dipper.constants import GROUP_COLOURS
-from dipper.state import AppState
-from dipper.view import gutter_text, indicator_text
+from dipper.commons.constants import GROUP_COLOURS
+from dipper.model.state import AppState
+from dipper.view.render import gutter_text, indicator_text
 
 
 class LineListView(ListView):

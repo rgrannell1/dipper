@@ -1,6 +1,6 @@
 """Generates the annotated output format from the document model"""
 
-from dipper.constants import (
+from dipper.commons.constants import (
     GROUP_FORMAT,
     MARK_FORMAT,
     META_FILEPATH_FORMAT,
@@ -8,7 +8,7 @@ from dipper.constants import (
     UNDERLINE_CHAR,
     UNDERLINE_MIN,
 )
-from dipper.state import DocumentModel, selected_groups
+from dipper.model.state import DocumentModel, selected_groups
 
 
 def format_range(start: int, end: int) -> str:

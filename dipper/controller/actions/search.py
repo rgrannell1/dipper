@@ -7,11 +7,11 @@ import re as regex_module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dipper.app import ClipperApp
+    from dipper.view.app import ClipperApp
 
-from dipper.actions.nav import jump_to_line
-from dipper.modals import CommandModal
-from dipper.widgets import LineListView
+from dipper.controller.actions.nav import jump_to_line
+from dipper.view.modals import CommandModal
+from dipper.view.widgets import LineListView
 
 
 def apply_clear_search(app: ClipperApp, lv: LineListView) -> None:

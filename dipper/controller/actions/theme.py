@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dipper.app import ClipperApp
+    from dipper.view.app import ClipperApp
 
-from dipper.highlight import highlighted_lines
-from dipper.themes import DEFAULT_THEME, THEMES
+from dipper.commons.highlight import highlighted_lines
+from dipper.commons.themes import DEFAULT_THEME, THEMES
 
 
 def change_theme(app: ClipperApp, theme_name: str) -> None:

@@ -1,6 +1,6 @@
 """Query functions over collections of LineState."""
 
-from dipper.state.line import LineState
+from dipper.model.state.line import LineState
 
 
 def selected_groups(lines: list[LineState]) -> set[int]:

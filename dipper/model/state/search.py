@@ -1,6 +1,6 @@
 """SearchState: active search pattern, match positions, and cursor within matches."""
 
-from dipper.state.line import LineState
+from dipper.model.state.line import LineState
 
 
 class SearchState:

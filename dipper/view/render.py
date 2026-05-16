@@ -6,8 +6,8 @@ from rich.style import Style
 from rich.text import Text
 from textual.widgets import ListItem, Static
 
-from dipper.constants import GROUP_COLOURS
-from dipper.state import AppState, selected_groups
+from dipper.commons.constants import GROUP_COLOURS
+from dipper.model.state import AppState, selected_groups
 
 # --- pure render helpers ---
 

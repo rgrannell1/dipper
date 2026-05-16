@@ -6,7 +6,7 @@ from pygments.lexers import get_lexer_by_name, get_lexer_for_filename, guess_lex
 from pygments.style import Style
 from pygments.util import ClassNotFound
 
-from dipper.themes import DEFAULT_THEME, THEMES
+from dipper.commons.themes import DEFAULT_THEME, THEMES
 
 
 def choose_lexer(source: str, filename: str | None):

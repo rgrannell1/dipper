@@ -1,7 +1,7 @@
 """GroupState: active group selection, names, and annotations."""
 
-from dipper.constants import GROUP_COUNT
-from dipper.state.line import GroupAnnotation
+from dipper.commons.constants import GROUP_COUNT
+from dipper.model.state.line import GroupAnnotation
 
 
 class GroupState:

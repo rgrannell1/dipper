@@ -9,13 +9,13 @@ from rich.style import Style
 from rich.text import Text
 from textual.command import Hit, Hits, Provider
 
-from dipper.constants import GROUP_COLOURS
-from dipper.state import selected_groups
-from dipper.themes import THEMES
-from dipper.view import group_dot
+from dipper.commons.constants import GROUP_COLOURS
+from dipper.commons.themes import THEMES
+from dipper.model.state import selected_groups
+from dipper.view.render import group_dot
 
 if TYPE_CHECKING:
-    from dipper.app import ClipperApp
+    from dipper.view.app import ClipperApp
 
 
 def group_display(group: int, label: str, note: str) -> Text:

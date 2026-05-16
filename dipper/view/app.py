@@ -8,20 +8,20 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
 
-from dipper.actions import groups as groups_actions
-from dipper.actions import misc as misc_actions
-from dipper.actions import nav as nav_actions
-from dipper.actions import range_fill as range_fill_actions
-from dipper.actions import search as search_actions
-from dipper.actions import theme as theme_actions
-from dipper.bindings import APP_BINDINGS
-from dipper.highlight import highlighted_lines
-from dipper.output import render_output
-from dipper.providers import GroupProvider, ThemeProvider
-from dipper.state import AppState, LineState
-from dipper.themes import DEFAULT_THEME, THEMES
-from dipper.view import status_bar_text
-from dipper.widgets import LineListView
+from dipper.commons.highlight import highlighted_lines
+from dipper.commons.themes import DEFAULT_THEME, THEMES
+from dipper.controller.actions import groups as groups_actions
+from dipper.controller.actions import misc as misc_actions
+from dipper.controller.actions import nav as nav_actions
+from dipper.controller.actions import range_fill as range_fill_actions
+from dipper.controller.actions import search as search_actions
+from dipper.controller.actions import theme as theme_actions
+from dipper.controller.output import render_output
+from dipper.model.state import AppState, LineState
+from dipper.view.bindings import APP_BINDINGS
+from dipper.view.providers import GroupProvider, ThemeProvider
+from dipper.view.render import status_bar_text
+from dipper.view.widgets import LineListView
 
 
 class ClipperApp(App):

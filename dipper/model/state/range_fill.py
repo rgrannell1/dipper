@@ -1,6 +1,6 @@
 """RangeFillState: pending range-fill anchor and group."""
 
-from dipper.state.line import LineState
+from dipper.model.state.line import LineState
 
 
 class RangeFillState:

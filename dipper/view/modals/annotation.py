@@ -8,7 +8,7 @@ from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Input, Label
 
-from dipper.view import annotation_modal_title
+from dipper.view.render import annotation_modal_title
 
 
 class AnnotationModal(ModalScreen[str]):

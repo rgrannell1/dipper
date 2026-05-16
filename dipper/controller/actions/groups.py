@@ -6,11 +6,11 @@ import functools
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dipper.app import ClipperApp
+    from dipper.view.app import ClipperApp
 
-from dipper.actions.nav import cursor_group
-from dipper.modals import AnnotationModal, RenameModal
-from dipper.state import selected_groups
+from dipper.controller.actions.nav import cursor_group
+from dipper.model.state import selected_groups
+from dipper.view.modals import AnnotationModal, RenameModal
 
 
 def set_group(app: ClipperApp, group: int) -> None:
