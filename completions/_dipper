@@ -13,7 +13,8 @@ _dipper() {
     '--json[output annotations as JSON]' \
     '--output[write output to FILE; bare --output auto-derives path]:output file:_files' \
     '--load[restore session from an annotations file]:annotations file:_files' \
-    '--files[annotate unannotated files matching GLOB]:glob pattern:'
+    '--files[annotate unannotated files matching GLOB]:glob pattern:' \
+    '--edit[with --files: re-open already-annotated files]'
 }
 
 _dipper "$@"
