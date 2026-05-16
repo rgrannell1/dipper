@@ -75,6 +75,38 @@ The separator divides the document body from our group summarise. Headers are fo
 | `{ranges}` | run-length encoded line numbers, e.g. `1-3,7,12-15` |
 | `{name}` | group label from `--groups` / `--preset`, if set |
 
+## Yazi Integration
+
+`integrations/yazi/dipper-annotate` is a wrapper script that runs dipper and saves output to `<file>.annotations`. Install it on your `$PATH`:
+
+```sh
+cp integrations/yazi/dipper-annotate ~/.local/bin/
+```
+
+Then configure yazi to use it as the default opener for text files in `~/.config/yazi/yazi.toml`:
+
+```toml
+[opener]
+dipper = [
+  { run = 'dipper-annotate "$@"', block = true, desc = "Annotate with dipper" }
+]
+
+[open]
+prepend_rules = [
+  { mime = "text/*", use = ["dipper", "edit", "reveal"] },
+]
+```
+
+Pressing `o` on a text file opens it in dipper. Quitting with `q` writes `<file>.annotations` alongside the source.
+
+## Shell Completions
+
+Zsh completions are in `completions/_dipper`. Install with:
+
+```sh
+rs install-completions
+```
+
 ## Licence
 
 Copyright © 2026 Róisín Grannell

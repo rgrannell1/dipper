@@ -1,0 +1,15 @@
+#compdef dipper
+
+_dipper() {
+  _arguments -s \
+    '1::file to annotate:_files' \
+    '--prompt[subtitle shown in the header bar]:string:' \
+    '--header[label shown above the line list]:string:' \
+    '--groups[comma-separated group names (e.g. bug,note,todo)]:csv:' \
+    '--preset[named group preset]:preset:(priorities cr)' \
+    '--lines[output selected lines with marks only]' \
+    '--summary[output group summary block only]' \
+    '--output[write output to FILE instead of stdout]:output file:_files'
+}
+
+_dipper "$@"

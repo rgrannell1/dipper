@@ -8,8 +8,7 @@ from dipper.constants import (
     UNDERLINE_CHAR,
     UNDERLINE_MIN,
 )
-from dipper.model import DocumentModel
-from dipper.state import selected_groups
+from dipper.state import DocumentModel, selected_groups
 
 
 def format_range(start: int, end: int) -> str:

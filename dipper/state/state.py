@@ -1,12 +1,10 @@
-"""AppState: thin coordinator that delegates to sub-state objects in state.py."""
+"""AppState: thin coordinator that delegates to sub-state objects."""
 
 from dipper.constants import GROUP_COUNT
-from dipper.state import (
-    GroupState,
-    LineState,
-    RangeFillState,
-    SearchState,
-)
+from dipper.state.group import GroupState
+from dipper.state.line import LineState
+from dipper.state.range_fill import RangeFillState
+from dipper.state.search import SearchState
 
 
 class AppState:

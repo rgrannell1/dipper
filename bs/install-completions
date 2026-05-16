@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Install dipper zsh completions into the first writable fpath directory."""
+
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
+COMPLETION_SRC = Path(__file__).parent.parent / "completions" / "_dipper"
+
+FALLBACK_DIRS = [
+    Path.home() / ".zsh" / "completions",
+    Path.home() / ".local" / "share" / "zsh" / "site-functions",
+]
+
+
+def fpath_dirs() -> list[Path]:
+    result = subprocess.run(
+        ["zsh", "-c", "print -l $fpath"],
+        capture_output=True,
+        text=True,
+    )
+    return [Path(line.strip()) for line in result.stdout.splitlines() if line.strip()]
+
+
+def writable_fpath() -> Path | None:
+    for directory in fpath_dirs():
+        if directory.exists() and os.access(directory, os.W_OK):
+            return directory
+    return None
+
+
+def pick_install_dir() -> Path:
+    fpath_target = writable_fpath()
+    if fpath_target:
+        return fpath_target
+
+    for directory in FALLBACK_DIRS:
+        answer = input(f"No writable fpath directory found. Create {directory}? [y/N] ").strip().lower()
+        if answer == "y":
+            directory.mkdir(parents=True, exist_ok=True)
+            print(f"Add this line to your ~/.zshrc:\n  fpath=({directory} $fpath)")
+            return directory
+
+    raise SystemExit("No installation directory selected; aborting.")
+
+
+def main() -> None:
+    target_dir = pick_install_dir()
+    dest = target_dir / "_dipper"
+    shutil.copy(COMPLETION_SRC, dest)
+    print(f"Installed: {dest}")
+    print("Reload completions with:  autoload -U compinit && compinit")
+
+
+main()

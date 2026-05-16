@@ -12,7 +12,7 @@ from textual.widgets import ListView, Static
 
 from dipper.constants import GROUP_COUNT
 from dipper.modals.rename import RenameModal
-from dipper.model import AppState
+from dipper.state import AppState
 from dipper.view import group_row_item, group_row_text
 
 

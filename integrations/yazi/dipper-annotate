@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Open a file in dipper and write annotations to <filepath>.annotations
+set -euo pipefail
+file="$1"
+dipper "$file" --lines --summary --output "${file}.annotations"

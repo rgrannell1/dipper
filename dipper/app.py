@@ -8,13 +8,17 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
 
-from dipper import actions
+from dipper.actions import groups as groups_actions
+from dipper.actions import misc as misc_actions
+from dipper.actions import nav as nav_actions
+from dipper.actions import range_fill as range_fill_actions
+from dipper.actions import search as search_actions
+from dipper.actions import theme as theme_actions
 from dipper.bindings import APP_BINDINGS
 from dipper.highlight import highlighted_lines
-from dipper.model import AppState
 from dipper.output import render_output
 from dipper.providers import GroupProvider, ThemeProvider
-from dipper.state import LineState
+from dipper.state import AppState, LineState
 from dipper.themes import DEFAULT_THEME, THEMES
 from dipper.view import status_bar_text
 from dipper.widgets import LineListView
@@ -74,13 +78,13 @@ class ClipperApp(App):
         return self.query_one(LineListView)
 
     def jump_to_line(self, idx: int) -> None:
-        actions.jump_to_line(self, idx)
+        nav_actions.jump_to_line(self, idx)
 
     def set_group(self, group: int) -> None:
-        actions.set_group(self, group)
+        groups_actions.set_group(self, group)
 
     def change_theme(self, theme_name: str) -> None:
-        actions.change_theme(self, theme_name)
+        theme_actions.change_theme(self, theme_name)
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         self.refresh_status()
@@ -91,24 +95,24 @@ class ClipperApp(App):
     def on_key(self, event: events.Key) -> None:
         ch = event.character
         if ch == "g":
-            actions.jump_to_line(self, 0)
+            nav_actions.jump_to_line(self, 0)
             event.stop()
         elif ch == "G":
             last_idx = len(self._model.lines) - 1
-            actions.jump_to_line(self, last_idx)
+            nav_actions.jump_to_line(self, last_idx)
             event.stop()
         elif ch == "*":
-            actions.select_all_matches(self)
+            search_actions.select_all_matches(self)
             event.stop()
 
     def action_annotate(self) -> None:
-        actions.open_annotate(self)
+        groups_actions.open_annotate(self)
 
     def action_rename_group(self) -> None:
-        actions.open_rename_group(self)
+        groups_actions.open_rename_group(self)
 
     def action_fill_range(self) -> None:
-        actions.fill_range(self)
+        range_fill_actions.fill_range(self)
 
     def action_write_output(self) -> None:
         result = render_output(
@@ -118,22 +122,22 @@ class ClipperApp(App):
         self.exit(result)
 
     def action_goto_line(self) -> None:
-        actions.open_goto_line(self)
+        nav_actions.open_goto_line(self)
 
     def action_search(self) -> None:
-        actions.open_search(self)
+        search_actions.open_search(self)
 
     def action_next_match(self) -> None:
-        actions.next_match(self)
+        search_actions.next_match(self)
 
     def action_prev_match(self) -> None:
-        actions.prev_match(self)
+        search_actions.prev_match(self)
 
     def action_reset(self) -> None:
-        actions.reset(self)
+        misc_actions.reset(self)
 
     def action_groups_overview(self) -> None:
-        actions.open_groups_overview(self)
+        misc_actions.open_groups_overview(self)
 
 
 def run(  # noqa: PLR0913

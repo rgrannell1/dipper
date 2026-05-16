@@ -1,8 +1,7 @@
 import re
 import pytest
 from dipper.constants import DIPPER_PREFIX, SEPARATOR_LINE, UNDERLINE_MIN
-from dipper.model import DocumentModel
-from dipper.state import LineState
+from dipper.state import DocumentModel, LineState
 from dipper.output import render_output, encode_ranges
 
 

@@ -9,20 +9,8 @@ from textual.message import Message
 from textual.widgets import ListItem, ListView, Static
 
 from dipper.constants import GROUP_COLOURS
-from dipper.model import AppState
-
-
-def gutter_text(line_num: str, highlighted: bool) -> Text:
-    style = "bold yellow" if highlighted else "dim"
-    return Text(f"{line_num} ", style=style)
-
-
-def indicator_text(group: int, anchor_group: int, is_anchor: bool) -> Text:
-    if group != 0:
-        return Text("● ", style=f"bold {GROUP_COLOURS[group]}")
-    if is_anchor:
-        return Text("◆ ", style=f"bold {GROUP_COLOURS[anchor_group]}")
-    return Text("  ")
+from dipper.state import AppState
+from dipper.view import gutter_text, indicator_text
 
 
 class LineListView(ListView):
