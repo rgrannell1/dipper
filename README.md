@@ -1,7 +1,71 @@
 
+
 # Dipper
 
 Interactive file annotation.
+
+## Installation
+
+Clone the repository and install with `uv`:
+
+```sh
+git clone https://github.com/rgrannell1/dipper.git
+cd dipper
+uv sync
+uv tool install .
+```
+
+## Uses
+
+Dipper is useful for quickly annotating code bases and text documents with whatever groupings and note you'd like. It can add:
+
+- TODOs / fixmes / refactor annotations
+- Complaints about complexity
+- Notes like `citation needed` in a knowledge-base
+
+There are some preset groupings:
+
+- `cr`; `bug`, `critical`, `minor`, `question`, `note`
+- `priorities`: `p1` ... `p5`
+
+## Examples
+
+
+## Output Format
+
+Dipper writes structured plain text. All metadata lines are prefixed with `%%dipper:` so they can be identified and stripped by downstream tools.
+
+**Structure**
+
+```
+%%dipper:meta:filepath:{path}%%
+{source line 1}
+{source line 2}
+%%dipper:mark:{group}:{line}%% {underline}
+...
+
+%%dipper:separator%%
+
+%%dipper:group:{group}:{ranges}%% {name}
+{annotation text}
+
+```
+
+Mark lines immediately follow each annotated source line. 
+
+Mark lines follow each annotated source-code line.
+The separator divides the document body from our group summarise. Headers are followed by a text command.
+
+**Fields**
+
+| Token | Meaning |
+|---|---|
+| `{path}` | path of the source file |
+| `{group}` | integer 1–9 identifying the colour group |
+| `{line}` | 1-based line number of the annotated source line |
+| `{underline}` | `^` characters, length ≥ 6 and ≥ source line length |
+| `{ranges}` | run-length encoded line numbers, e.g. `1-3,7,12-15` |
+| `{name}` | group label from `--groups` / `--preset`, if set |
 
 ## Licence
 
