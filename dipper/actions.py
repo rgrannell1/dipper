@@ -20,6 +20,7 @@ def jump_to_line(app: ClipperApp, idx: int) -> None:
 
 
 def cursor_group(app: ClipperApp) -> int:
+    # Returns 0 when the view isn't mounted yet or the cursor sits on an unassigned line.
     try:
         idx = app.line_view().cursor_index
     except Exception:
@@ -32,7 +33,7 @@ def set_group(app: ClipperApp, group: int) -> None:
     app._model.active_group = group
     lv = app.line_view()
     if old_anchor is not None:
-        lv.redraw_line(old_anchor)
+        lv.redraw_line(old_anchor)  # erase the anchor diamond now that the anchor is cleared
     app.refresh_status()
 
 
@@ -42,6 +43,7 @@ def rename_done(app: ClipperApp, group: int, result: str) -> None:
 
 
 def open_rename_group(app: ClipperApp) -> None:
+    # Prefer the group under the cursor; fall back to active_group when cursor is on an unassigned line.
     grp = cursor_group(app) or app._model.active_group
     existing = app._model.group_names.get(grp, "")
     callback = functools.partial(rename_done, app, grp)
@@ -57,6 +59,7 @@ def open_annotate(app: ClipperApp) -> None:
     used = app._model.selected_groups()
     if not used:
         return
+    # Prefer annotating the active group if it has lines; otherwise fall back to the lowest used group.
     group = app._model.active_group if app._model.active_group in used else min(used)
     existing = app._model.annotations[group].text if group in app._model.annotations else ""
     label = app._model.group_label(group)
@@ -65,6 +68,7 @@ def open_annotate(app: ClipperApp) -> None:
 
 
 def fill_range(app: ClipperApp) -> None:
+    # First press sets the anchor; second press fills from anchor to cursor and clears it.
     lv = app.line_view()
     idx = lv.cursor_index
     if app._model.range_anchor is None:
@@ -105,13 +109,14 @@ def apply_search(app: ClipperApp, lv: LineListView, value: str) -> None:
     old_matches = set(app._model.match_indices)
     indices = [idx for idx, line in enumerate(app._model.lines) if pattern.search(line.text)]
     app._model.set_search(value, indices)
-    lv.redraw_lines(old_matches.symmetric_difference(set(indices)))
+    lv.redraw_lines(old_matches.symmetric_difference(set(indices)))  # redraw only lines whose match status changed
     app.refresh_status()
     if indices:
         jump_to_line(app, indices[0])
 
 
 def search_result(app: ClipperApp, value: str | None) -> None:
+    # None means the modal was dismissed without submitting; empty string means clear the search.
     if value is None:
         return
     lv = app.line_view()
