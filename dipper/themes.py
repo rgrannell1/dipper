@@ -8,125 +8,227 @@ from textual.theme import Theme
 
 # ── Pygments styles ───────────────────────────────────────────────────────────
 
+# ── Roseate palette ───────────────────────────────────────────────────────────
+_R_BG = "#2c2833"
+_R_SURFACE = "#221e2b"
+_R_PANEL = "#3a3040"
+_R_FG = "#FFF0F5"
+_R_PRIMARY = "#ff82cb"   # keyword / accent
+_R_SECONDARY = "#82AAFF"   # type / function
+_R_COMMENT = "#6b5c70"
+_R_STRING = "#a8d8ea"
+_R_NUMBER = "#ffb347"
+_R_PUNCT = "#d4b4e0"
+_R_ERROR = "#ff5c8a"
+
 
 class RoseateStyle(Style):
-    background_color = "#2c2833"
+    background_color = _R_BG
     styles: ClassVar[dict] = {
-        Token:              "#FFF0F5",
-        Comment:            "#6b5c70",
-        Keyword:            "#ff82cb",
-        Keyword.Type:       "#82AAFF",
-        Operator.Word:      "#ff82cb",
-        Name.Function:      "#82AAFF",
-        Name.Class:         "#82AAFF",
-        Name.Builtin:       "#ff82cb",
-        Name.Decorator:     "#ff82cb",
-        String:             "#a8d8ea",
-        Number:             "#ffb347",
-        Punctuation:        "#d4b4e0",
+        Token:              _R_FG,
+        Comment:            _R_COMMENT,
+        Keyword:            _R_PRIMARY,
+        Keyword.Type:       _R_SECONDARY,
+        Operator.Word:      _R_PRIMARY,
+        Name.Function:      _R_SECONDARY,
+        Name.Class:         _R_SECONDARY,
+        Name.Builtin:       _R_PRIMARY,
+        Name.Decorator:     _R_PRIMARY,
+        String:             _R_STRING,
+        Number:             _R_NUMBER,
+        Punctuation:        _R_PUNCT,
     }
+
+
+# ── Dark palette ──────────────────────────────────────────────────────────────
+_D_BG = "#0d0d0d"
+_D_SURFACE = "#1a1a1a"
+_D_PANEL = "#222222"
+_D_FG = "#c8c8c8"
+_D_PRIMARY = "#5fafff"   # keyword / accent
+_D_SECONDARY = "#87af87"   # type / function
+_D_COMMENT = "#666666"
+_D_STRING = "#afd787"
+_D_NUMBER = "#d7af87"
+_D_PUNCT = "#c8c8c8"
+_D_ERROR = "#ff5f5f"
 
 
 class DarkStyle(Style):
-    background_color = "#0d0d0d"
+    background_color = _D_BG
     styles: ClassVar[dict] = {
-        Token:              "#c8c8c8",
-        Comment:            "#666666",
-        Keyword:            "#5fafff",
-        Keyword.Type:       "#87af87",
-        Operator.Word:      "#5fafff",
-        Name.Function:      "#87af87",
-        Name.Class:         "#87af87",
-        Name.Builtin:       "#5fafff",
-        String:             "#afd787",
-        Number:             "#d7af87",
-        Punctuation:        "#c8c8c8",
+        Token:              _D_FG,
+        Comment:            _D_COMMENT,
+        Keyword:            _D_PRIMARY,
+        Keyword.Type:       _D_SECONDARY,
+        Operator.Word:      _D_PRIMARY,
+        Name.Function:      _D_SECONDARY,
+        Name.Class:         _D_SECONDARY,
+        Name.Builtin:       _D_PRIMARY,
+        String:             _D_STRING,
+        Number:             _D_NUMBER,
+        Punctuation:        _D_PUNCT,
     }
+
+
+# ── Lavender palette ──────────────────────────────────────────────────────────
+_L_BG = "#f5f0ff"
+_L_SURFACE = "#ebe4f8"
+_L_PANEL = "#ddd6f0"
+_L_FG = "#2d1f5e"
+_L_PRIMARY = "#7c4dce"   # keyword / accent
+_L_SECONDARY = "#c2185b"   # type / function
+_L_COMMENT = "#9b8ab8"
+_L_STRING = "#2e7d32"
+_L_NUMBER = "#e65100"
+_L_PUNCT = "#4a3080"
+_L_ERROR = "#c2185b"
 
 
 class LavenderStyle(Style):
-    background_color = "#f5f0ff"
+    background_color = _L_BG
     styles: ClassVar[dict] = {
-        Token:              "#2d1f5e",
-        Comment:            "#9b8ab8",
-        Keyword:            "#7c4dce",
-        Keyword.Type:       "#c2185b",
-        Operator.Word:      "#7c4dce",
-        Name.Function:      "#c2185b",
-        Name.Class:         "#c2185b",
-        Name.Builtin:       "#7c4dce",
-        String:             "#2e7d32",
-        Number:             "#e65100",
-        Punctuation:        "#4a3080",
+        Token:              _L_FG,
+        Comment:            _L_COMMENT,
+        Keyword:            _L_PRIMARY,
+        Keyword.Type:       _L_SECONDARY,
+        Operator.Word:      _L_PRIMARY,
+        Name.Function:      _L_SECONDARY,
+        Name.Class:         _L_SECONDARY,
+        Name.Builtin:       _L_PRIMARY,
+        String:             _L_STRING,
+        Number:             _L_NUMBER,
+        Punctuation:        _L_PUNCT,
     }
+
+
+# ── Dracula palette ───────────────────────────────────────────────────────────
+_DR_BG = "#282A36"
+_DR_SURFACE = "#21222C"
+_DR_PANEL = "#44475A"
+_DR_FG = "#F8F8F2"
+_DR_PRIMARY = "#FF79C6"   # keyword / accent
+_DR_SECONDARY = "#8BE9FD"   # type / function
+_DR_COMMENT = "#6272A4"
+_DR_FUNCTION = "#50FA7B"
+_DR_STRING = "#F1FA8C"
+_DR_NUMBER = "#BD93F9"
+_DR_PUNCT = "#F8F8F2"
+_DR_WARNING = "#FFB86C"
+_DR_ERROR = "#FF5555"
 
 
 class DraculaStyle(Style):
-    background_color = "#282A36"
+    background_color = _DR_BG
     styles: ClassVar[dict] = {
-        Token:              "#F8F8F2",
-        Comment:            "#6272A4",
-        Keyword:            "#FF79C6",
-        Keyword.Type:       "#8BE9FD",
-        Operator.Word:      "#FF79C6",
-        Name.Function:      "#50FA7B",
-        Name.Class:         "#50FA7B",
-        Name.Builtin:       "#FF79C6",
-        Name.Decorator:     "#50FA7B",
-        String:             "#F1FA8C",
-        Number:             "#BD93F9",
-        Punctuation:        "#F8F8F2",
+        Token:              _DR_FG,
+        Comment:            _DR_COMMENT,
+        Keyword:            _DR_PRIMARY,
+        Keyword.Type:       _DR_SECONDARY,
+        Operator.Word:      _DR_PRIMARY,
+        Name.Function:      _DR_FUNCTION,
+        Name.Class:         _DR_FUNCTION,
+        Name.Builtin:       _DR_PRIMARY,
+        Name.Decorator:     _DR_FUNCTION,
+        String:             _DR_STRING,
+        Number:             _DR_NUMBER,
+        Punctuation:        _DR_PUNCT,
     }
+
+
+# ── Dark+ palette ─────────────────────────────────────────────────────────────
+_DP_BG = "#1E1E1E"
+_DP_SURFACE = "#252526"
+_DP_PANEL = "#333333"
+_DP_FG = "#D4D4D4"
+_DP_PRIMARY = "#569CD6"   # keyword / accent
+_DP_SECONDARY = "#4EC9B0"   # type
+_DP_COMMENT = "#6A9955"
+_DP_FUNCTION = "#DCDCAA"
+_DP_STRING = "#CE9178"
+_DP_NUMBER = "#B5CEA8"
+_DP_PUNCT = "#D4D4D4"
+_DP_ERROR = "#F44747"
 
 
 class DarkPlusStyle(Style):
-    background_color = "#1E1E1E"
+    background_color = _DP_BG
     styles: ClassVar[dict] = {
-        Token:              "#D4D4D4",
-        Comment:            "#6A9955",
-        Keyword:            "#569CD6",
-        Keyword.Type:       "#4EC9B0",
-        Operator.Word:      "#569CD6",
-        Name.Function:      "#DCDCAA",
-        Name.Class:         "#4EC9B0",
-        Name.Builtin:       "#569CD6",
-        String:             "#CE9178",
-        Number:             "#B5CEA8",
-        Punctuation:        "#D4D4D4",
+        Token:              _DP_FG,
+        Comment:            _DP_COMMENT,
+        Keyword:            _DP_PRIMARY,
+        Keyword.Type:       _DP_SECONDARY,
+        Operator.Word:      _DP_PRIMARY,
+        Name.Function:      _DP_FUNCTION,
+        Name.Class:         _DP_SECONDARY,
+        Name.Builtin:       _DP_PRIMARY,
+        String:             _DP_STRING,
+        Number:             _DP_NUMBER,
+        Punctuation:        _DP_PUNCT,
     }
+
+
+# ── Light+ palette ────────────────────────────────────────────────────────────
+_LP_BG = "#FFFFFF"
+_LP_SURFACE = "#F3F3F3"
+_LP_PANEL = "#E8E8E8"
+_LP_FG = "#000000"
+_LP_PRIMARY = "#0451A5"   # builtin / accent
+_LP_SECONDARY = "#267F99"   # type
+_LP_ACCENT = "#0000FF"   # keyword
+_LP_COMMENT = "#008000"
+_LP_FUNCTION = "#795E26"
+_LP_STRING = "#A31515"
+_LP_NUMBER = "#098658"
+_LP_PUNCT = "#000000"
 
 
 class LightPlusStyle(Style):
-    background_color = "#FFFFFF"
+    background_color = _LP_BG
     styles: ClassVar[dict] = {
-        Token:              "#000000",
-        Comment:            "#008000",
-        Keyword:            "#0000FF",
-        Keyword.Type:       "#267F99",
-        Operator.Word:      "#0000FF",
-        Name.Function:      "#795E26",
-        Name.Class:         "#267F99",
-        Name.Builtin:       "#0451A5",
-        String:             "#A31515",
-        Number:             "#098658",
-        Punctuation:        "#000000",
+        Token:              _LP_FG,
+        Comment:            _LP_COMMENT,
+        Keyword:            _LP_ACCENT,
+        Keyword.Type:       _LP_SECONDARY,
+        Operator.Word:      _LP_ACCENT,
+        Name.Function:      _LP_FUNCTION,
+        Name.Class:         _LP_SECONDARY,
+        Name.Builtin:       _LP_PRIMARY,
+        String:             _LP_STRING,
+        Number:             _LP_NUMBER,
+        Punctuation:        _LP_PUNCT,
     }
 
 
+# ── GitHub Light palette ──────────────────────────────────────────────────────
+_GL_BG = "#FFFFFF"
+_GL_SURFACE = "#F6F8FA"
+_GL_PANEL = "#EAECEF"
+_GL_FG = "#24292E"
+_GL_PRIMARY = "#D73A49"   # keyword / accent
+_GL_SECONDARY = "#6F42C1"   # type / function
+_GL_COMMENT = "#6A737D"
+_GL_STRING = "#032F62"
+_GL_NUMBER = "#005CC5"
+_GL_PUNCT = "#24292E"
+_GL_WARNING = "#E36209"
+_GL_SUCCESS = "#22863A"
+
+
 class GitHubLightStyle(Style):
-    background_color = "#FFFFFF"
+    background_color = _GL_BG
     styles: ClassVar[dict] = {
-        Token:              "#24292E",
-        Comment:            "#6A737D",
-        Keyword:            "#D73A49",
-        Keyword.Type:       "#6F42C1",
-        Operator.Word:      "#D73A49",
-        Name.Function:      "#6F42C1",
-        Name.Class:         "#6F42C1",
-        Name.Builtin:       "#D73A49",
-        String:             "#032F62",
-        Number:             "#005CC5",
-        Punctuation:        "#24292E",
+        Token:              _GL_FG,
+        Comment:            _GL_COMMENT,
+        Keyword:            _GL_PRIMARY,
+        Keyword.Type:       _GL_SECONDARY,
+        Operator.Word:      _GL_PRIMARY,
+        Name.Function:      _GL_SECONDARY,
+        Name.Class:         _GL_SECONDARY,
+        Name.Builtin:       _GL_PRIMARY,
+        String:             _GL_STRING,
+        Number:             _GL_NUMBER,
+        Punctuation:        _GL_PUNCT,
     }
 
 
@@ -135,106 +237,106 @@ class GitHubLightStyle(Style):
 
 ROSEATE = Theme(
     name="roseate",
-    primary="#ff82cb",
-    secondary="#82AAFF",
-    warning="#ffb347",
-    error="#ff5c8a",
-    success="#a8d8ea",
-    accent="#ff82cb",
-    foreground="#FFF0F5",
-    background="#2c2833",
-    surface="#221e2b",
-    panel="#3a3040",
+    primary=_R_PRIMARY,
+    secondary=_R_SECONDARY,
+    warning=_R_NUMBER,
+    error=_R_ERROR,
+    success=_R_STRING,
+    accent=_R_PRIMARY,
+    foreground=_R_FG,
+    background=_R_BG,
+    surface=_R_SURFACE,
+    panel=_R_PANEL,
     dark=True,
 )
 
 DARK = Theme(
     name="maxima-dark",
-    primary="#5fafff",
-    secondary="#87af87",
-    warning="#d7af87",
-    error="#ff5f5f",
-    success="#87af87",
-    accent="#5fafff",
-    foreground="#c8c8c8",
-    background="#0d0d0d",
-    surface="#1a1a1a",
-    panel="#222222",
+    primary=_D_PRIMARY,
+    secondary=_D_SECONDARY,
+    warning=_D_NUMBER,
+    error=_D_ERROR,
+    success=_D_SECONDARY,
+    accent=_D_PRIMARY,
+    foreground=_D_FG,
+    background=_D_BG,
+    surface=_D_SURFACE,
+    panel=_D_PANEL,
     dark=True,
 )
 
 LAVENDER = Theme(
     name="lavender",
-    primary="#7c4dce",
-    secondary="#c2185b",
-    warning="#e65100",
-    error="#c2185b",
-    success="#2e7d32",
-    accent="#7c4dce",
-    foreground="#2d1f5e",
-    background="#f5f0ff",
-    surface="#ebe4f8",
-    panel="#ddd6f0",
+    primary=_L_PRIMARY,
+    secondary=_L_SECONDARY,
+    warning=_L_NUMBER,
+    error=_L_ERROR,
+    success=_L_STRING,
+    accent=_L_PRIMARY,
+    foreground=_L_FG,
+    background=_L_BG,
+    surface=_L_SURFACE,
+    panel=_L_PANEL,
     dark=False,
 )
 
 DRACULA = Theme(
     name="maxima-dracula",
-    primary="#FF79C6",
-    secondary="#8BE9FD",
-    warning="#FFB86C",
-    error="#FF5555",
-    success="#50FA7B",
-    accent="#BD93F9",
-    foreground="#F8F8F2",
-    background="#282A36",
-    surface="#21222C",
-    panel="#44475A",
+    primary=_DR_PRIMARY,
+    secondary=_DR_SECONDARY,
+    warning=_DR_WARNING,
+    error=_DR_ERROR,
+    success=_DR_FUNCTION,
+    accent=_DR_NUMBER,
+    foreground=_DR_FG,
+    background=_DR_BG,
+    surface=_DR_SURFACE,
+    panel=_DR_PANEL,
     dark=True,
 )
 
 DARK_PLUS = Theme(
     name="dark-plus",
-    primary="#569CD6",
-    secondary="#4EC9B0",
-    warning="#CE9178",
-    error="#F44747",
-    success="#B5CEA8",
-    accent="#DCDCAA",
-    foreground="#D4D4D4",
-    background="#1E1E1E",
-    surface="#252526",
-    panel="#333333",
+    primary=_DP_PRIMARY,
+    secondary=_DP_SECONDARY,
+    warning=_DP_STRING,
+    error=_DP_ERROR,
+    success=_DP_NUMBER,
+    accent=_DP_FUNCTION,
+    foreground=_DP_FG,
+    background=_DP_BG,
+    surface=_DP_SURFACE,
+    panel=_DP_PANEL,
     dark=True,
 )
 
 LIGHT_PLUS = Theme(
     name="light-plus",
-    primary="#0451A5",
-    secondary="#267F99",
-    warning="#795E26",
-    error="#A31515",
-    success="#008000",
-    accent="#0000FF",
-    foreground="#000000",
-    background="#FFFFFF",
-    surface="#F3F3F3",
-    panel="#E8E8E8",
+    primary=_LP_PRIMARY,
+    secondary=_LP_SECONDARY,
+    warning=_LP_FUNCTION,
+    error=_LP_STRING,
+    success=_LP_COMMENT,
+    accent=_LP_ACCENT,
+    foreground=_LP_FG,
+    background=_LP_BG,
+    surface=_LP_SURFACE,
+    panel=_LP_PANEL,
     dark=False,
 )
 
 GITHUB_LIGHT = Theme(
     name="github-light",
-    primary="#D73A49",
-    secondary="#6F42C1",
-    warning="#E36209",
-    error="#D73A49",
-    success="#22863A",
-    accent="#6F42C1",
-    foreground="#24292E",
-    background="#FFFFFF",
-    surface="#F6F8FA",
-    panel="#EAECEF",
+    primary=_GL_PRIMARY,
+    secondary=_GL_SECONDARY,
+    warning=_GL_WARNING,
+    error=_GL_PRIMARY,
+    success=_GL_SUCCESS,
+    accent=_GL_SECONDARY,
+    foreground=_GL_FG,
+    background=_GL_BG,
+    surface=_GL_SURFACE,
+    panel=_GL_PANEL,
     dark=False,
 )
 
