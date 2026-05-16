@@ -27,10 +27,11 @@
 - [ ] #27 `open` — The annotation modal shows `COMMENT_GROUP_N` instead of the group's name (e.g. `p1`, `bug`). No test covers the modal label text.
 - [x] #26 `fixed` — There is no way to quickly assign a range of lines to a group; lines must be selected one at a time with tab.
   - **Design:** press `f` to place a range anchor on the current line (shown with a distinct symbol); navigate to another line; press `f` again to fill all lines between the two anchors into the active group.
-- [ ] #28 `open` — Pressing digit keys (1–9) to switch the active group is flaky; the active group does not reliably change.
+- [x] #28 `fixed` — Pressing digit keys (1–9) to switch the active group is flaky; the active group does not reliably change.
 - [x] #29 `fixed` — Pressing digit n to set the active group does not show group n's colour indicator in the status bar unless lines are already assigned to that group; the active group is invisible until used.
-- [ ] #30 `open` — Switching to a different group while a range anchor is set does not clear the anchor; the stale anchor marker (◆) remains visible and the fill will use the wrong group.
+- [x] #30 `fixed` — Switching to a different group while a range anchor is set does not clear the anchor; the stale anchor marker (◆) remains visible and the fill will use the wrong group.
 - [ ] #25 `wontfix` — `--preset priorities` only shows group 1 labelled `p1`; groups p2–p5 are missing. Could not reproduce.
+- [ ] #31 `open` — Two blocks of the same group separated only by blank lines are not treated as contiguous in the output; they produce separate line ranges instead of one spanning range.
 
 ## Passing
 

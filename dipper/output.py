@@ -10,7 +10,12 @@ from dipper.constants import (
 from dipper.model import DocumentModel
 
 
+def _format_range(start: int, end: int) -> str:
+    return f"{start}-{end}" if start != end else str(start)
+
+
 def _encode_ranges(line_numbers: list[int]) -> str:
+    # Compress a list of 1-based line numbers into minimal contiguous range notation, e.g. [1,2,3,7] → "1-3,7"
     if not line_numbers:
         return ""
     sorted_nums = sorted(line_numbers)
@@ -20,9 +25,9 @@ def _encode_ranges(line_numbers: list[int]) -> str:
         if num == end + 1:
             end = num
         else:
-            ranges.append(f"{start}-{end}" if start != end else str(start))
+            ranges.append(_format_range(start, end))
             start = end = num
-    ranges.append(f"{start}-{end}" if start != end else str(start))
+    ranges.append(_format_range(start, end))
     return ",".join(ranges)
 
 
