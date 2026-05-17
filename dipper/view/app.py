@@ -83,7 +83,7 @@ class ClipperApp(App):
 
     def on_mount(self) -> None:
         if self._files_mode:
-            self.bind("ctrl+q", "abort_batch", description="Abort batch")
+            self.bind("ctrl+x", "abort_batch", description="Abort batch")
 
     def action_abort_batch(self) -> None:
         self.exit(ABORT_BATCH)
@@ -162,6 +162,9 @@ class ClipperApp(App):
 
     def action_groups_overview(self) -> None:
         misc_actions.open_groups_overview(self)
+
+    def action_help(self) -> None:
+        misc_actions.open_help(self)
 
 
 def run(source: str, args: RunArgs) -> tuple[str | None, dict[int, str]]:

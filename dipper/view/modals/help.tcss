@@ -1,0 +1,11 @@
+HelpModal {
+    align: center middle;
+}
+
+HelpModal #help-container {
+    width: 52;
+    height: 22;
+    border: round $accent;
+    background: $surface;
+    padding: 1 2;
+}

@@ -47,3 +47,13 @@ def find_annotated_files(glob_pattern: str) -> list[Path]:
     """Return files matching glob_pattern that have a corresponding .annotations file."""
     matched = sorted(Path(path_str) for path_str in glob.glob(glob_pattern, recursive=True))
     return [fpath for fpath in matched if fpath.is_file() and annotation_path(fpath).exists()]
+
+
+def clear_annotation_sidecars(glob_pattern: str) -> list[Path]:
+    """Delete .annotations sidecars for all files matching glob_pattern. Returns list of deleted paths."""
+    deleted = []
+    for fpath in find_annotated_files(glob_pattern):
+        sidecar = annotation_path(fpath)
+        sidecar.unlink()
+        deleted.append(sidecar)
+    return deleted

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dipper.view.app import ClipperApp
 
-from dipper.view.modals import GroupsModal
+from dipper.view.modals import GroupsModal, HelpModal
 
 
 def reset(app: ClipperApp) -> None:
@@ -30,3 +30,7 @@ def undo(app: ClipperApp) -> None:
 
 def open_groups_overview(app: ClipperApp) -> None:
     app.push_screen(GroupsModal(app._model), lambda _: app.refresh_status())
+
+
+def open_help(app: ClipperApp) -> None:
+    app.push_screen(HelpModal())

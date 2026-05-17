@@ -10,6 +10,7 @@ from dipper.commons.help import print_help
 from dipper.commons.paths import (
     AUTO_OUTPUT_SENTINEL,
     annotation_path,
+    clear_annotation_sidecars,
     find_annotated_files,
     find_unannotated_files,
     resolve_output_path,
@@ -59,6 +60,15 @@ def parse_group_names(groups_csv: str | None) -> dict[int, str]:
     }
 
 
+def validate_clear_flags(args: argparse.Namespace) -> None:
+    if args.clear and not args.files:
+        print("dipper: --clear requires --files", file=sys.stderr)
+        sys.exit(1)
+    if args.clear and args.edit:
+        print("dipper: --clear and --edit are mutually exclusive", file=sys.stderr)
+        sys.exit(1)
+
+
 def validate_files_flags(args: argparse.Namespace) -> None:
     if args.files and args.file:
         print("dipper: --files and a positional file argument are mutually exclusive", file=sys.stderr)
@@ -72,6 +82,7 @@ def validate_files_flags(args: argparse.Namespace) -> None:
     if args.edit and not args.files:
         print("dipper: --edit requires --files", file=sys.stderr)
         sys.exit(1)
+    validate_clear_flags(args)
 
 
 def validate_full_flags(args: argparse.Namespace) -> None:
@@ -130,6 +141,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Annotate all files matching GLOB that lack a .annotations file")
     parser.add_argument("--edit", action="store_true", default=False,
                         help="With --files: open already-annotated files by loading their .annotations sidecar")
+    parser.add_argument("--clear", action="store_true", default=False,
+                        help="With --files: delete .annotations sidecars for matched files, then exit")
     return parser
 
 
@@ -166,9 +179,8 @@ def run_batch(args: argparse.Namespace, targets: list, group_names: dict[int, st
             break
 
 
-def main() -> None:
-    """Orchestrate config loading, argument parsing, source reading, and launch the TUI."""
-    parser = build_parser()
+def resolve_config(parser: argparse.ArgumentParser) -> tuple[argparse.Namespace, dict[str, str]]:
+    """Parse CLI args merged with config-file defaults; return (args, presets)."""
     config_flag_tokens, presets = parse_config(config_path())
     config_ns = (
         parser.parse_args([*config_flag_tokens, "--"])
@@ -177,8 +189,25 @@ def main() -> None:
     )
     cli_ns = parser.parse_args()
     merge_config(cli_ns, config_ns)
-    args = cli_ns
+    return cli_ns, presets
+
+
+def run_clear(args: argparse.Namespace) -> bool:
+    """Execute --clear: delete sidecars and return True if --clear was active."""
+    if not args.clear:
+        return False
+    for sidecar in clear_annotation_sidecars(args.files):
+        print(f"cleared {sidecar}")
+    return True
+
+
+def main() -> None:
+    """Orchestrate config loading, argument parsing, source reading, and launch the TUI."""
+    parser = build_parser()
+    args, presets = resolve_config(parser)
     validate_output_flags(args)
+    if run_clear(args):
+        return
     group_names = parse_group_names(resolve_groups(args, presets))
     targets = list(iter_run_targets(args, parser))
     if args.files and not targets:
