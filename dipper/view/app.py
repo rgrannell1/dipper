@@ -20,7 +20,7 @@ from dipper.controller.actions import search as search_actions
 from dipper.controller.actions import theme as theme_actions
 from dipper.controller.output import render_json, render_output
 from dipper.model.state import AppState, LineState
-from dipper.view.app_types import RunArgs
+from dipper.view.app_types import LastAction, RunArgs
 from dipper.view.bindings import APP_BINDINGS
 from dipper.view.providers import GroupProvider, PresetProvider, ThemeProvider
 from dipper.view.render import status_bar_text
@@ -60,6 +60,7 @@ class ClipperApp(App):
         self.register_theme(theme_entry["textual"])
         self.theme = theme_entry["textual"].name
         self.sub_title = args.prompt or ""
+        self._last_action: LastAction | None = None
 
     def apply_load(self, source: str, filename: str | None, load_path: str) -> None:
         """Restore line groups, names, and block annotations from a saved session."""
@@ -112,6 +113,10 @@ class ClipperApp(App):
         self.refresh_status()
 
     def on_line_list_view_line_toggled(self, event: LineListView.LineToggled) -> None:
+        cursor_idx = self.line_view().cursor_index
+        line = self._model.lines[cursor_idx]
+        if line.group != 0:
+            self._last_action = LastAction(group=line.group, note=None)
         self.refresh_status()
 
     def on_key(self, event: events.Key) -> None:
@@ -166,6 +171,9 @@ class ClipperApp(App):
 
     def action_groups_overview(self) -> None:
         misc_actions.open_groups_overview(self)
+
+    def action_paste_last(self) -> None:
+        groups_actions.paste_last(self)
 
     def action_help(self) -> None:
         misc_actions.open_help(self)

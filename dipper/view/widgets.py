@@ -58,6 +58,8 @@ class LineListView(ListView):
 
     def redraw_line(self, idx: int) -> None:
         """Re-render a single list item from current model state."""
+        if not (0 <= idx < len(self._model.lines)):
+            return
         self.query_one(f"#l{idx} Static", Static).update(self.line_text(idx))
 
     def redraw_lines(self, indices) -> None:

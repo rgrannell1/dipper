@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 from dipper.controller.actions.nav import cursor_group
 from dipper.model.state import nearest_block, selected_groups
+from dipper.view.app_types import LastAction
 from dipper.view.modals import AnnotationModal, RenameModal
 
 
@@ -40,6 +41,7 @@ def open_rename_group(app: ClipperApp) -> None:
 def annotate_done(app: ClipperApp, group: int, block_start: int, result: str) -> None:
     app._model.take_snapshot()
     app._model.groups.set_annotation(group, block_start, result)
+    app._last_action = LastAction(group=group, note=result)
     app.refresh_status()
 
 
@@ -68,3 +70,19 @@ def open_annotate(app: ClipperApp) -> None:
     label = app._model.groups.label(group)
     callback = functools.partial(annotate_done, app, group, block_start)
     app.push_screen(AnnotationModal(group, label, existing, (start_line, end_line)), callback)
+
+
+def paste_last(app: ClipperApp) -> None:
+    """Apply the most recent group assignment and note to the line under the cursor."""
+    if app._last_action is None:
+        return
+    cursor_idx = app.line_view().cursor_index
+    app._model.take_snapshot()
+    app._model.set_line_group(cursor_idx, app._last_action.group)
+    if app._last_action.note is not None:
+        block = app._model.block_at(cursor_idx)
+        if block is not None:
+            assigned_group, block_start = block
+            app._model.groups.set_annotation(assigned_group, block_start, app._last_action.note)
+    app.line_view().redraw_line(cursor_idx)
+    app.refresh_status()

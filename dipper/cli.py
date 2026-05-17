@@ -11,7 +11,7 @@ from dipper.commons.paths import (
     AUTO_OUTPUT_SENTINEL,
     annotation_path,
     clear_annotation_sidecars,
-    find_annotated_files,
+    find_all_files,
     find_unannotated_files,
     resolve_output_path,
 )
@@ -151,16 +151,16 @@ def iter_run_targets(
 ):
     """Yield (source, filename, output_path, load_path) for each file to process."""
     if args.files:
-        candidates = find_annotated_files(args.files) if args.edit else find_unannotated_files(args.files)
+        candidates = find_all_files(args.files) if args.edit else find_unannotated_files(args.files)
         for fpath in candidates:
             try:
                 source = fpath.read_text()
             except UnicodeDecodeError:
                 print(f"dipper: skipping binary file: {fpath}", file=sys.stderr)
                 continue
-            sidecar = str(annotation_path(fpath))
-            load_path = sidecar if args.edit else None
-            yield source, str(fpath), sidecar, load_path
+            sidecar = annotation_path(fpath)
+            load_path = str(sidecar) if args.edit and sidecar.exists() else None
+            yield source, str(fpath), str(sidecar), load_path
     else:
         source, filename = read_source(args, parser)
         yield source, filename, resolve_output_path(args.output, filename), args.load

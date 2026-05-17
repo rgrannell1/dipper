@@ -13,6 +13,9 @@ from dipper.view.modals import CommandModal
 
 
 def jump_to_line(app: ClipperApp, idx: int) -> None:
+    line_count = len(app._model.lines)
+    if line_count == 0 or not (0 <= idx < line_count):
+        return
     lv = app.line_view()
     lv.index = idx
     lv.scroll_to_widget(lv.query_one(f"#l{idx}"))

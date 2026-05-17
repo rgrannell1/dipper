@@ -17,4 +17,5 @@ APP_BINDINGS: ClassVar[list[Binding]] = [
     Binding("u", "undo", "Undo"),
     Binding("o", "groups_overview", "Groups"),
     Binding("question_mark", "help", "Help"),
+    Binding("p", "paste_last", "Paste last", show=False),
 ]

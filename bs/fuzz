@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+PYTHONPATH=. exec uv run python3 tests/fuzz.py "$@"

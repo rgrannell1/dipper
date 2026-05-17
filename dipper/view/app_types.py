@@ -6,6 +6,14 @@ from dipper.commons.themes import DEFAULT_THEME
 
 
 @dataclass
+class LastAction:
+    """Records the most recent group assignment and optional note for paste replay."""
+
+    group: int
+    note: str | None
+
+
+@dataclass
 class RunArgs:
     """Bundles all CLI-derived configuration for a single dipper session."""
 

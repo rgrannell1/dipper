@@ -43,6 +43,12 @@ def find_unannotated_files(glob_pattern: str) -> list[Path]:
     ]
 
 
+def find_all_files(glob_pattern: str) -> list[Path]:
+    """Return all files matching glob_pattern, regardless of annotation state."""
+    matched = sorted(Path(path_str) for path_str in glob.glob(glob_pattern, recursive=True))
+    return [fpath for fpath in matched if fpath.is_file()]
+
+
 def find_annotated_files(glob_pattern: str) -> list[Path]:
     """Return files matching glob_pattern that have a corresponding .annotations file."""
     matched = sorted(Path(path_str) for path_str in glob.glob(glob_pattern, recursive=True))
