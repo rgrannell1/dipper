@@ -30,8 +30,10 @@ def highlighted_lines(source: str, filename: str | None = None, style: type[Styl
     rendered = highlight(source, lexer, formatter)
     # Strip trailing newline that pygments always appends
     lines = rendered.splitlines()
-    # Pad so length matches source line count (pygments may trim trailing blanks)
     source_count = len(source.splitlines())
+    # Truncate if pygments added extra lines (e.g. empty file → one trailing "\n")
+    lines = lines[:source_count]
+    # Pad if pygments trimmed trailing blank lines
     while len(lines) < source_count:
         lines.append("")
     return lines

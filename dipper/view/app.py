@@ -22,7 +22,7 @@ from dipper.controller.output import render_json, render_output
 from dipper.model.state import AppState, LineState
 from dipper.view.app_types import RunArgs
 from dipper.view.bindings import APP_BINDINGS
-from dipper.view.providers import GroupProvider, ThemeProvider
+from dipper.view.providers import GroupProvider, PresetProvider, ThemeProvider
 from dipper.view.render import status_bar_text
 from dipper.view.widgets import LineListView
 
@@ -31,7 +31,7 @@ class ClipperApp(App):
     """File annotation TUI."""
 
     TITLE = "dipper"
-    COMMANDS: ClassVar[set] = {GroupProvider, ThemeProvider}
+    COMMANDS: ClassVar[set] = {GroupProvider, PresetProvider, ThemeProvider}
     CSS_PATH = "app.tcss"
 
     BINDINGS: ClassVar[list[Binding]] = APP_BINDINGS
@@ -56,6 +56,7 @@ class ClipperApp(App):
         self._output_full = args.output_full
         self._output_json = args.output_json
         self._files_mode = args.files_mode
+        self._presets = args.presets
         self.register_theme(theme_entry["textual"])
         self.theme = theme_entry["textual"].name
         self.sub_title = args.prompt or ""
@@ -103,6 +104,9 @@ class ClipperApp(App):
 
     def change_theme(self, theme_name: str) -> None:
         theme_actions.change_theme(self, theme_name)
+
+    def change_preset(self, preset_name: str, group_csv: str) -> None:
+        misc_actions.change_preset(self, preset_name, group_csv)
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         self.refresh_status()

@@ -1,4 +1,4 @@
-"""Command palette providers: GroupProvider and ThemeProvider"""
+"""Command palette providers: GroupProvider, ThemeProvider, PresetProvider"""
 
 from __future__ import annotations
 
@@ -86,4 +86,27 @@ class ThemeProvider(Provider):
                 score=score,
                 match_display=theme_display(searchable, primary),
                 command=functools.partial(app.change_theme, name),
+            )
+
+
+class PresetProvider(Provider):
+    """Command palette provider listing all available group presets."""
+
+    async def search(self, query: str) -> Hits:
+        app: ClipperApp = self.app  # type: ignore
+        matcher = self.matcher(query)
+
+        for name, group_csv in app._presets.items():
+            searchable = f"Preset - {name}"
+            score = matcher.match(searchable) if query else 1.0
+            if score == 0:
+                continue
+            display = Text()
+            display.append("⬡ ", style="bold dim")
+            display.append(searchable, style="bold")
+            display.append(f"  {group_csv}", style="dim")
+            yield Hit(
+                score=score,
+                match_display=display,
+                command=functools.partial(app.change_preset, name, group_csv),
             )

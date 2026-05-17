@@ -21,3 +21,4 @@ class RunArgs:
     load_path: str | None = None
     theme: str = DEFAULT_THEME
     files_mode: bool = False
+    presets: dict[str, str] = field(default_factory=dict)

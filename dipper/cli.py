@@ -166,14 +166,14 @@ def iter_run_targets(
         yield source, filename, resolve_output_path(args.output, filename), args.load
 
 
-def run_batch(args: argparse.Namespace, targets: list, group_names: dict[int, str]) -> None:
+def run_batch(args: argparse.Namespace, targets: list, group_names: dict[int, str], presets: dict[str, str]) -> None:
     """Launch a TUI session for each (source, filename, output_path, load_path) target."""
     files_mode = bool(args.files)
     for source, filename, output_path, load_path in targets:
         result, group_names = run(source, RunArgs(
             filename=filename, prompt=args.prompt, header=args.header, group_names=group_names,
             output_lines=args.lines, output_summary=args.summary, output_json=args.json, output_full=args.full,
-            output_path=output_path, load_path=load_path, files_mode=files_mode,
+            output_path=output_path, load_path=load_path, files_mode=files_mode, presets=presets,
         ))
         if result == ABORT_BATCH:
             break
@@ -214,4 +214,5 @@ def main() -> None:
         label = "annotated" if args.edit else "unannotated"
         print(f"dipper: no {label} files found", file=sys.stderr)
         return
-    run_batch(args, targets, group_names)
+    merged_presets = {**BUILTIN_PRESETS, **presets}
+    run_batch(args, targets, group_names, merged_presets)
