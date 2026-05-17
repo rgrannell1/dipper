@@ -24,6 +24,12 @@ GROUP_FORMAT = "%%dipper:group:{group}:{ranges}%%"
 # Metadata line emitted as the first line of output when a source filepath is known
 META_FILEPATH_FORMAT = "%%dipper:meta:filepath:{filepath}%%"
 
+# Prefix of mark lines in annotations files; used to detect whether a sidecar has any selections
+MARK_LINE_PREFIX = "%%dipper:mark:"
+
+# Sentinel returned by ClipperApp when the user aborts the entire --files batch (ctrl+q)
+ABORT_BATCH = "__abort_batch__"
+
 # Named group presets built into dipper (user config can add more or override)
 BUILTIN_PRESETS: dict[str, str] = {
     "priorities": "p1,p2,p3,p4,p5",

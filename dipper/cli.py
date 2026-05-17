@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from dipper.commons.config import config_path, parse_config
-from dipper.commons.constants import BUILTIN_PRESETS
+from dipper.commons.constants import ABORT_BATCH, BUILTIN_PRESETS
 from dipper.commons.help import print_help
 from dipper.commons.paths import (
     AUTO_OUTPUT_SENTINEL,
@@ -155,12 +155,15 @@ def iter_run_targets(
 
 def run_batch(args: argparse.Namespace, targets: list, group_names: dict[int, str]) -> None:
     """Launch a TUI session for each (source, filename, output_path, load_path) target."""
+    files_mode = bool(args.files)
     for source, filename, output_path, load_path in targets:
-        run(source, RunArgs(
+        result, group_names = run(source, RunArgs(
             filename=filename, prompt=args.prompt, header=args.header, group_names=group_names,
             output_lines=args.lines, output_summary=args.summary, output_json=args.json, output_full=args.full,
-            output_path=output_path, load_path=load_path,
+            output_path=output_path, load_path=load_path, files_mode=files_mode,
         ))
+        if result == ABORT_BATCH:
+            break
 
 
 def main() -> None:

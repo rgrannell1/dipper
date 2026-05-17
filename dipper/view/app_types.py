@@ -20,3 +20,4 @@ class RunArgs:
     output_path: str | None = None
     load_path: str | None = None
     theme: str = DEFAULT_THEME
+    files_mode: bool = False

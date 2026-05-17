@@ -8,6 +8,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
 
+from dipper.commons.constants import ABORT_BATCH
 from dipper.commons.highlight import highlighted_lines
 from dipper.commons.loader import load_session
 from dipper.commons.themes import DEFAULT_THEME, THEMES
@@ -54,6 +55,7 @@ class ClipperApp(App):
         self._output_summary = args.output_summary
         self._output_full = args.output_full
         self._output_json = args.output_json
+        self._files_mode = args.files_mode
         self.register_theme(theme_entry["textual"])
         self.theme = theme_entry["textual"].name
         self.sub_title = args.prompt or ""
@@ -78,6 +80,13 @@ class ClipperApp(App):
         yield LineListView(self._model, self._hi_lines)
         yield Label(status_bar_text(self._model, self._filename, 0), id="status")
         yield Footer()
+
+    def on_mount(self) -> None:
+        if self._files_mode:
+            self.bind("ctrl+q", "abort_batch", description="Abort batch")
+
+    def action_abort_batch(self) -> None:
+        self.exit(ABORT_BATCH)
 
     def refresh_status(self) -> None:
         cursor_idx = self.line_view().cursor_index
@@ -155,11 +164,13 @@ class ClipperApp(App):
         misc_actions.open_groups_overview(self)
 
 
-def run(source: str, args: RunArgs) -> None:
+def run(source: str, args: RunArgs) -> tuple[str | None, dict[int, str]]:
     app = ClipperApp(source, args)
     result = app.run()
-    if result:
+    final_group_names = dict(app._model.groups.names)
+    if result and result != ABORT_BATCH:
         if args.output_path:
             Path(args.output_path).write_text(result)
         else:
             print(result)
+    return result, final_group_names
