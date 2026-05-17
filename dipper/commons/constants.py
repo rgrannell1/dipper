@@ -33,7 +33,7 @@ ABORT_BATCH = "__abort_batch__"
 # Named group presets built into dipper (user config can add more or override)
 BUILTIN_PRESETS: dict[str, str] = {
     "priorities": "p1,p2,p3,p4,p5",
-    "cr": "bug,critical,minor,praise,question,note",
+    "cr": "note,minor,bug,critical,question,praise",
 }
 
 # Colours for groups 1-9, indexed by group number (1-based, index 0 unused)
