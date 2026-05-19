@@ -7,3 +7,7 @@ design.md
 expectations.md
 requirements.md
 snags.md
+*.annotations
+build/
+.vscode/
+demo.cast

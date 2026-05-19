@@ -1,4 +1,4 @@
-"""Fuzz tester: blasts random key sequences against random inputs to verify the TUI cannot crash."""
+"""Fuzz tester: blasts random key sequences against random inputs to detect crashes and key-liveness failures."""
 
 import asyncio
 import random
@@ -41,6 +41,14 @@ KEY_ALPHABET: list[tuple[str, int]] = [
 KEY_NAMES: list[str] = [key for key, _ in KEY_ALPHABET]
 KEY_WEIGHTS: list[int] = [weight for _, weight in KEY_ALPHABET]
 
+# Liveness sessions omit 'q' so the app stays running for the post-blast responsiveness check
+KEY_ALPHABET_LIVENESS: list[tuple[str, int]] = [(key, wt) for key, wt in KEY_ALPHABET if key != "q"]
+KEY_NAMES_LIVENESS: list[str] = [key for key, _ in KEY_ALPHABET_LIVENESS]
+KEY_WEIGHTS_LIVENESS: list[int] = [wt for _, wt in KEY_ALPHABET_LIVENESS]
+
+# Fraction of sessions that run a liveness check instead of a pure crash test
+LIVENESS_SESSION_PROBABILITY = 0.4
+
 FILENAMES: list[str | None] = [None, "test.py", "test.md", "test.sh", "test.json", "test.txt"]
 
 THEMES_LIST: list[str] = list(THEMES.keys())
@@ -72,6 +80,7 @@ class FuzzSession:
     num: int
     shape: str
     key_count: int
+    mode: str = "crash"  # "crash" or "liveness"
 
 
 def random_word() -> str:
@@ -165,10 +174,40 @@ async def run_session(source: str, keys: list[str]) -> None:
         await pilot.press(*keys)
 
 
+async def check_key_liveness(app: ClipperApp, pilot) -> None:
+    """Verify that modal-opening keys remain responsive after a random key blast."""
+    for _ in range(10):
+        await pilot.press("escape")
+    if len(app.screen_stack) != 1:
+        raise AssertionError(f"screen stack not cleared after escapes: depth {len(app.screen_stack)}")
+    if not app._model.lines:
+        return
+    # Toggle cursor line into a group so 'n' has a block to annotate
+    await pilot.press("tab")
+    cursor_idx = app.line_view().cursor_index
+    if app._model.lines[cursor_idx].group == 0:
+        await pilot.press("tab")  # was already grouped; retoggle to restore it
+    if app._model.lines[cursor_idx].group == 0:
+        return  # could not establish a grouped line; skip rather than false-fail
+    await pilot.press("n")
+    if len(app.screen_stack) != 2:
+        raise AssertionError(f"'n' unresponsive after {SESSION_KEY_COUNT} random keys (stack depth: {len(app.screen_stack)})")
+    await pilot.press("escape")
+
+
+async def run_liveness_session(source: str, keys: list[str]) -> None:
+    """Launch a session without 'q', then verify modal keys still respond."""
+    filename = random.choice(FILENAMES)
+    app = ClipperApp(source, random_run_args(filename))
+    async with app.run_test() as pilot:
+        await pilot.press(*keys)
+        await check_key_liveness(app, pilot)
+
+
 def log_result(session: FuzzSession, status: str, start: float) -> None:
     """Print a one-line session summary."""
     elapsed = time.monotonic() - start
-    line = f"session {session.num:4d}  shape={session.shape:<15}  keys={session.key_count}  {status}  [{elapsed:.0f}s]"
+    line = f"session {session.num:4d}  mode={session.mode:<9}  shape={session.shape:<15}  keys={session.key_count}  {status}  [{elapsed:.0f}s]"
     print(line, flush=True)
 
 
@@ -181,18 +220,25 @@ def report_crash(session: FuzzSession, start: float) -> bool:
 
 
 async def attempt_session(session_num: int, start: float) -> bool:
-    """Run one fuzz session; log the result; return False if a crash was found."""
+    """Run one fuzz session; log the result; return False if a crash or liveness failure is found."""
     source, shape = random_source()
-    keys = random_key_sequence()
-    session = FuzzSession(num=session_num, shape=shape, key_count=len(keys))
+    use_liveness = bool(source) and random.random() < LIVENESS_SESSION_PROBABILITY
+    if use_liveness:
+        keys = random.choices(KEY_NAMES_LIVENESS, weights=KEY_WEIGHTS_LIVENESS, k=SESSION_KEY_COUNT)
+        run_fn = run_liveness_session
+    else:
+        keys = random_key_sequence()
+        run_fn = run_session
+    mode = "liveness" if use_liveness else "crash"
+    session = FuzzSession(num=session_num, shape=shape, key_count=len(keys), mode=mode)
     try:
-        await asyncio.wait_for(run_session(source, keys), timeout=SESSION_TIMEOUT)
+        await asyncio.wait_for(run_fn(source, keys), timeout=SESSION_TIMEOUT)
         log_result(session, "pass", start)
         return True
     except TimeoutError:
         log_result(session, "TIMEOUT", start)
         return True
-    except Exception:  # noqa: BLE001 -- intentional: catch any TUI crash
+    except Exception:  # noqa: BLE001 -- intentional: catch any TUI crash or AssertionError
         return report_crash(session, start)
 
 

@@ -15,7 +15,7 @@ APP_BINDINGS: ClassVar[list[Binding]] = [
     Binding("f", "fill_range", "Fill range", show=False),
     Binding("colon", "goto_line", "Go to line", show=False),
     Binding("slash", "search", "Search", show=False),
-    Binding("greater_than_sign", "next_match", "Next match", show=False, priority=True),
-    Binding("less_than_sign", "prev_match", "Prev match", show=False, priority=True),
+    Binding("greater_than_sign", "next_block", "Next block", show=False, priority=True),
+    Binding("less_than_sign", "prev_block", "Prev block", show=False, priority=True),
     Binding("p", "paste_last", "Paste last", show=False),
 ]

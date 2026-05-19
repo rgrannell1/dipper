@@ -40,6 +40,52 @@ def nearest_block(lines: list[LineState], cursor: int) -> tuple[int, int] | None
     return best
 
 
+def next_diff_hunk_start(indices: list[int], cursor: int) -> int | None:
+    """Return the first diff hunk start strictly after cursor, or None."""
+    index_set = set(indices)
+    for idx in indices:
+        if idx <= cursor:
+            continue
+        if idx - 1 not in index_set:
+            return idx
+    return None
+
+
+def prev_diff_hunk_start(indices: list[int], cursor: int) -> int | None:
+    """Return the last diff hunk start strictly before cursor, or None."""
+    index_set = set(indices)
+    result = None
+    for idx in indices:
+        if idx >= cursor:
+            break
+        if idx - 1 not in index_set:
+            result = idx
+    return result
+
+
+def next_block_start(lines: list[LineState], cursor: int) -> int | None:
+    """Return the index of the first block start strictly after cursor, or None."""
+    for idx in range(cursor + 1, len(lines)):
+        if lines[idx].group == 0:
+            continue
+        prev_group = lines[idx - 1].group if idx > 0 else 0
+        if prev_group != lines[idx].group:
+            return idx
+    return None
+
+
+def prev_block_start(lines: list[LineState], cursor: int) -> int | None:
+    """Return the index of the last block start strictly before cursor, or None."""
+    result = None
+    for idx in range(cursor):
+        if lines[idx].group == 0:
+            continue
+        prev_group = lines[idx - 1].group if idx > 0 else 0
+        if prev_group != lines[idx].group:
+            result = idx
+    return result
+
+
 def nearest_annotated_block(
     lines: list[LineState],
     block_annotations: dict[tuple[int, int], str],

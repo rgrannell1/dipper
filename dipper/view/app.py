@@ -8,7 +8,8 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, Label, ListView
 
-from dipper.commons.constants import ABORT_BATCH
+from dipper.commons.colour import resolve_diff_colours, resolve_diff_marks
+from dipper.commons.constants import ABORT_BATCH, PREV_FILE
 from dipper.commons.highlight import highlighted_lines
 from dipper.commons.loader import load_session
 from dipper.commons.themes import DEFAULT_THEME, THEMES
@@ -20,6 +21,7 @@ from dipper.controller.actions import search as search_actions
 from dipper.controller.actions import theme as theme_actions
 from dipper.controller.output import render_json, render_output
 from dipper.model.state import AppState, LineState
+from dipper.model.state.search import SearchOverlays
 from dipper.view.app_types import LastAction, RunArgs
 from dipper.view.bindings import APP_BINDINGS
 from dipper.view.providers import GroupProvider, PresetProvider, ThemeProvider
@@ -27,7 +29,7 @@ from dipper.view.render import status_bar_text
 from dipper.view.widgets import LineListView
 
 
-class ClipperApp(App):
+class ClipperApp(App):  # noqa: PLR0904
     """File annotation TUI."""
 
     TITLE = "dipper"
@@ -50,6 +52,7 @@ class ClipperApp(App):
         self._hi_lines = highlighted_lines(source, args.filename, style=theme_entry["pygments"])
         self._filename = args.filename or "<stdin>"
         self._output_filepath = args.filename
+        self._output_path = args.output_path
         self._header = args.header
         self._output_lines = args.output_lines
         self._output_summary = args.output_summary
@@ -61,6 +64,11 @@ class ClipperApp(App):
         self.theme = theme_entry["textual"].name
         self.sub_title = args.prompt or ""
         self._last_action: LastAction | None = None
+        if args.diff_lines:
+            line_colours = resolve_diff_colours(theme_entry["pygments"], args.diff_lines)
+            line_marks = resolve_diff_marks(args.diff_lines)
+            overlays = SearchOverlays(line_colours=line_colours, line_marks=line_marks)
+            self._model.search.set("diff", sorted(line_colours), overlays=overlays)
 
     def apply_load(self, source: str, filename: str | None, load_path: str) -> None:
         """Restore line groups, names, and block annotations from a saved session."""
@@ -86,6 +94,8 @@ class ClipperApp(App):
     def on_mount(self) -> None:
         if self._files_mode:
             self.bind("ctrl+x", "abort_batch", description="Abort batch")
+            self.bind("right_square_bracket", "write_output", description="Next file", show=True)
+            self.bind("left_square_bracket", "prev_file", description="Prev file", show=True)
 
     def action_abort_batch(self) -> None:
         self.exit(ABORT_BATCH)
@@ -141,15 +151,31 @@ class ClipperApp(App):
     def action_fill_range(self) -> None:
         range_fill_actions.fill_range(self)
 
-    def action_write_output(self) -> None:
+    def rendered_output(self) -> str | None:
+        """Render the current session to a string (JSON or annotated text)."""
         if self._output_json:
-            result = render_json(self._model, self._output_filepath)
+            return render_json(self._model, self._output_filepath)
+        return render_output(
+            self._model, lines=self._output_lines, summary=self._output_summary,
+            full=self._output_full, filepath=self._output_filepath, source=self._source,
+        )
+
+    def write_current_file(self) -> None:
+        if self._output_path:
+            result = self.rendered_output()
+            if result is not None:
+                Path(self._output_path).write_text(result)
+
+    def action_write_output(self) -> None:
+        if self._files_mode:
+            self.write_current_file()
+            self.exit(None)
         else:
-            result = render_output(
-                self._model, lines=self._output_lines, summary=self._output_summary,
-                full=self._output_full, filepath=self._output_filepath,
-            )
-        self.exit(result)
+            self.exit(self.rendered_output())
+
+    def action_prev_file(self) -> None:
+        self.write_current_file()
+        self.exit(PREV_FILE)
 
     def action_goto_line(self) -> None:
         nav_actions.open_goto_line(self)
@@ -162,6 +188,12 @@ class ClipperApp(App):
 
     def action_prev_match(self) -> None:
         search_actions.prev_match(self)
+
+    def action_next_block(self) -> None:
+        nav_actions.next_block(self)
+
+    def action_prev_block(self) -> None:
+        nav_actions.prev_block(self)
 
     def action_reset(self) -> None:
         misc_actions.reset(self)
@@ -183,7 +215,7 @@ def run(source: str, args: RunArgs) -> tuple[str | None, dict[int, str]]:
     app = ClipperApp(source, args)
     result = app.run()
     final_group_names = dict(app._model.groups.names)
-    if result and result != ABORT_BATCH:
+    if result and result not in {ABORT_BATCH, PREV_FILE}:
         if args.output_path:
             Path(args.output_path).write_text(result)
         else:

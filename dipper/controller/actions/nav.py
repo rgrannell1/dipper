@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 from textual.css.query import NoMatches
 
+from dipper.model.state.queries import next_block_start, next_diff_hunk_start, prev_block_start, prev_diff_hunk_start
 from dipper.view.modals import CommandModal
 
 
@@ -29,6 +30,26 @@ def cursor_group(app: ClipperApp) -> int:
         return 0
     lines = app._model.lines
     return lines[idx].group if idx < len(lines) else 0
+
+
+def next_block(app: ClipperApp) -> None:
+    """Jump to the next group block start, falling back to diff hunk starts."""
+    cursor = app.line_view().cursor_index
+    idx = next_block_start(app._model.lines, cursor)
+    if idx is None:
+        idx = next_diff_hunk_start(app._model.search.indices, cursor)
+    if idx is not None:
+        jump_to_line(app, idx)
+
+
+def prev_block(app: ClipperApp) -> None:
+    """Jump to the previous group block start, falling back to diff hunk starts."""
+    cursor = app.line_view().cursor_index
+    idx = prev_block_start(app._model.lines, cursor)
+    if idx is None:
+        idx = prev_diff_hunk_start(app._model.search.indices, cursor)
+    if idx is not None:
+        jump_to_line(app, idx)
 
 
 def open_goto_line(app: ClipperApp) -> None:

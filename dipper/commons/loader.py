@@ -1,6 +1,7 @@
 """Session loader: restores line assignments, group names, and block annotations from a dipper annotations file."""
 
 import contextlib
+import hashlib
 import re
 import sys
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from dipper.commons.constants import GROUP_COUNT
 MARK_RE = re.compile(r"^%%dipper:mark:(\d+):(\d+)%%")
 GROUP_RE = re.compile(r"^%%dipper:group:(\d+):([^%]+)%%\s*(.*)")
 META_RE = re.compile(r"^%%dipper:meta:filepath:(.+)%%")
+META_HASH_RE = re.compile(r"^%%dipper:meta:hash:([0-9a-f]{64})%%")
 DIPPER_LINE_RE = re.compile(r"^%%dipper:[^%]+%%")
 SEPARATOR = "%%dipper:separator%%"
 
@@ -134,6 +136,24 @@ def verify_filepath(annotations_text: str, source_abs: str) -> None:
                 )
                 sys.exit(1)
             break
+
+
+def stored_hash(annotations_text: str) -> str | None:
+    """Extract the stored source hash from an annotations file, or None if absent."""
+    for raw_line in annotations_text.splitlines():
+        match = META_HASH_RE.match(raw_line)
+        if match:
+            return match.group(1)
+    return None
+
+
+def is_stale(source: str, annotations_text: str) -> bool:
+    """Return True if the stored hash exists and does not match the current source hash."""
+    expected = stored_hash(annotations_text)
+    if expected is None:
+        return False
+    actual = hashlib.sha256(source.encode()).hexdigest()
+    return actual != expected
 
 
 def load_session(source: str, filepath: str | None, load_path: str) -> LoadedSession:

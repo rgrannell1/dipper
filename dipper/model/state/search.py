@@ -1,25 +1,46 @@
 """SearchState: active search pattern, match positions, and cursor within matches."""
 
+from dataclasses import dataclass, field
+
+from dipper.commons.constants import DEFAULT_SEARCH_COLOUR
 from dipper.model.state.line import LineState
 
 
+@dataclass
+class SearchOverlays:
+    """Per-line colour and gutter mark overrides, used for diff highlighting."""
+
+    line_colours: dict[int, str] = field(default_factory=dict)
+    line_marks: dict[int, str] = field(default_factory=dict)
+
+
 class SearchState:
-    """Tracks active search pattern, match positions, and cursor within matches."""
+    """Tracks active search pattern, match positions, cursor within matches, and highlight colour."""
 
     def __init__(self) -> None:
         self.pattern: str = ""
         self.indices: list[int] = []
         self.cursor: int = 0
+        self.colour: str = DEFAULT_SEARCH_COLOUR
+        self.line_colours: dict[int, str] = {}
+        self.line_marks: dict[int, str] = {}
 
-    def set(self, pattern: str, indices: list[int]) -> None:
+    def set(self, pattern: str, indices: list[int], colour: str = DEFAULT_SEARCH_COLOUR, overlays: SearchOverlays | None = None) -> None:  # noqa: E501
         self.pattern = pattern
         self.indices = indices
         self.cursor = 0
+        self.colour = colour
+        resolved = overlays or SearchOverlays()
+        self.line_colours = resolved.line_colours
+        self.line_marks = resolved.line_marks
 
     def clear(self) -> None:
         self.pattern = ""
         self.indices = []
         self.cursor = 0
+        self.colour = DEFAULT_SEARCH_COLOUR
+        self.line_colours = {}
+        self.line_marks = {}
 
     def advance(self) -> int | None:
         if not self.indices:

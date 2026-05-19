@@ -5,9 +5,11 @@ from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.events import Key
 from textual.screen import ModalScreen
 from textual.widgets import Input, Label
 
+from dipper.commons.completion import TabCompleter
 from dipper.view.render import annotation_modal_title
 
 
@@ -17,24 +19,37 @@ class AnnotationModal(ModalScreen[str]):
     BINDINGS: ClassVar[list[Binding]] = [Binding("escape", "dismiss('')", "Cancel")]
     CSS_PATH = str(Path(__file__).parent / "annotation.tcss")
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         group: int,
         label: str,
         existing: str = "",
         block_range: tuple[int, int] | None = None,
+        completions: list[str] | None = None,
     ) -> None:
         super().__init__()
         self._group = group
         self._label = label
         self._existing = existing
         self._block_range = block_range
+        self._completer = TabCompleter(completions or [])
 
     def compose(self) -> ComposeResult:
         start_line, end_line = self._block_range if self._block_range else (0, 0)
         title = annotation_modal_title(self._group, self._label, start_line, end_line)
         yield Label(title, id="modal-label")
         yield Input(value=self._existing, placeholder="Enter annotation…", id="modal-input")
+
+    def on_key(self, event: Key) -> None:
+        if event.key != "tab":
+            return
+        event.prevent_default()
+        input_widget = self.query_one("#modal-input", Input)
+        completed = self._completer.advance(input_widget.value)
+        if completed is None:
+            return
+        input_widget.value = completed
+        input_widget.cursor_position = len(completed)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self.dismiss(event.value)

@@ -68,8 +68,9 @@ def open_annotate(app: ClipperApp) -> None:
     group, block_start, start_line, end_line = target
     existing = app._model.groups.block_annotation(group, block_start)
     label = app._model.groups.label(group)
+    completions = [text for text in app._model.groups.block_annotations.values() if text]
     callback = functools.partial(annotate_done, app, group, block_start)
-    app.push_screen(AnnotationModal(group, label, existing, (start_line, end_line)), callback)
+    app.push_screen(AnnotationModal(group, label, existing, (start_line, end_line), completions), callback)
 
 
 def paste_last(app: ClipperApp) -> None:

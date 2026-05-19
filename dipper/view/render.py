@@ -12,9 +12,14 @@ from dipper.model.state import AppState, nearest_annotated_block, selected_group
 # --- pure render helpers ---
 
 
-def gutter_text(line_num: str, highlighted: bool) -> Text:
-    style = "bold yellow" if highlighted else "dim"
+def gutter_text(line_num: str, highlighted: bool, colour: str = "yellow") -> Text:
+    style = f"bold {colour}" if highlighted else "dim"
     return Text(f"{line_num} ", style=style)
+
+
+def diff_mark_text(mark: str, colour: str) -> Text:
+    """Git-diff marker column: the glyph (+ added, ~ modified) plus a trailing space, in the diff colour."""
+    return Text(f"{mark} ", style=Style(color=colour, bold=True))
 
 
 def indicator_text(group: int, anchor_group: int, is_anchor: bool) -> Text:

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dipper.view.app import ClipperApp
 
+from dipper.commons.colour import parse_colour_prefix
 from dipper.controller.actions.nav import jump_to_line
 from dipper.view.modals import CommandModal
 from dipper.view.widgets import LineListView
@@ -22,13 +23,15 @@ def apply_clear_search(app: ClipperApp, lv: LineListView) -> None:
 
 
 def apply_search(app: ClipperApp, lv: LineListView, value: str) -> None:
+    """Compile value (optionally prefixed with !<colour>) and update search state with matches."""
+    colour, pattern_str = parse_colour_prefix(value)
     try:
-        pattern = regex_module.compile(value, regex_module.IGNORECASE)
+        pattern = regex_module.compile(pattern_str, regex_module.IGNORECASE)
     except regex_module.error:
         return
     old_matches = set(app._model.search.indices)
     indices = [idx for idx, line in enumerate(app._model.lines) if pattern.search(line.text)]
-    app._model.search.set(value, indices)
+    app._model.search.set(value, indices, colour)
     lv.redraw_lines(old_matches.symmetric_difference(set(indices)))  # redraw only lines whose match status changed
     app.refresh_status()
     if indices:

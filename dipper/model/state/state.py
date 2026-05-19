@@ -143,6 +143,12 @@ class AppState:
         self.search.clear()
         self.range_fill.clear_anchor()
 
+    def reset_groups(self) -> None:
+        """Reset line groups and group names, preserving search state and range-fill anchor."""
+        for line in self._lines:
+            line.group = 0
+        self.groups.reset()
+
 
 # Backward-compatible alias so existing imports of DocumentModel continue to work.
 DocumentModel = AppState

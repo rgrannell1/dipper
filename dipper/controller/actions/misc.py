@@ -38,7 +38,7 @@ def open_help(app: ClipperApp) -> None:
 
 def change_preset(app: ClipperApp, preset_name: str, group_csv: str) -> None:
     app._model.take_snapshot()
-    app._model.reset()
+    app._model.reset_groups()
     new_names = {
         idx: name.strip()
         for idx, name in enumerate(group_csv.split(","), start=1)

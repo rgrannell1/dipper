@@ -6,10 +6,12 @@ from dipper.commons.constants import (
     GROUP_FORMAT,
     MARK_FORMAT,
     META_FILEPATH_FORMAT,
+    META_HASH_FORMAT,
     SEPARATOR_LINE,
     UNDERLINE_CHAR,
     UNDERLINE_MIN,
 )
+from dipper.commons.hash import source_hash
 from dipper.model.state import DocumentModel, selected_groups
 
 
@@ -140,8 +142,11 @@ def render_output(  # noqa: PLR0913, PLR0917
     summary: bool = False,
     full: bool = False,
     filepath: str | None = None,
+    source: str | None = None,
 ) -> str:
-    meta = META_FILEPATH_FORMAT.format(filepath=filepath) if filepath else None  # type: ignore
+    filepath_meta = META_FILEPATH_FORMAT.format(filepath=filepath) if filepath else None  # type: ignore
+    hash_meta = META_HASH_FORMAT.format(hash=source_hash(source)) if source else None
+    meta = "\n".join(part for part in [filepath_meta, hash_meta] if part) or None
     body_lines, _ = collect(model)
 
     if full:

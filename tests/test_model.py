@@ -1,5 +1,7 @@
 import pytest
 
+from dipper.commons.colour import resolve_diff_marks
+from dipper.commons.constants import DIFF_ADDED, DIFF_MODIFIED
 from dipper.model.state import (
     DocumentModel,
     GroupState,
@@ -11,6 +13,7 @@ from dipper.model.state import (
     nearest_group,
     selected_groups,
 )
+from dipper.model.state.search import SearchOverlays
 
 
 def make_model(*texts: str, active_group: int = 1) -> DocumentModel:
@@ -175,6 +178,25 @@ class TestSearchState:
         state.set("foo", [1, 2])
         state.clear()
         assert state.pattern == "" and state.indices == [] and state.cursor == 0
+
+    def test_set_stores_line_marks(self):
+        "Proves set() carries the per-line diff marker map from its overlays."
+        state = SearchState()
+        state.set("diff", [0, 1], overlays=SearchOverlays(line_marks={0: "+", 1: "~"}))
+        assert state.line_marks == {0: "+", 1: "~"}
+
+    def test_clear_empties_line_marks(self):
+        "Proves clear() wipes the per-line diff marker map."
+        state = SearchState()
+        state.set("diff", [0], overlays=SearchOverlays(line_marks={0: "+"}))
+        state.clear()
+        assert state.line_marks == {}
+
+    def test_set_without_line_marks_defaults_empty(self):
+        "Proves set() leaves line_marks empty when none are supplied."
+        state = SearchState()
+        state.set("foo", [1, 2])
+        assert state.line_marks == {}
 
     def test_advance_moves_to_next_index(self):
         "Proves advance() steps the cursor forward and returns the new match position."
@@ -559,3 +581,18 @@ class TestUndo:
         model.toggle_line(0)
         model.undo()
         assert model.undo() is False
+
+
+class TestResolveDiffMarks:
+    CASES = [
+        ("added becomes +", {1: DIFF_ADDED}, {0: "+"}),
+        ("modified becomes ~", {3: DIFF_MODIFIED}, {2: "~"}),
+        ("mixed labels shift to 0-based", {1: DIFF_ADDED, 2: DIFF_MODIFIED}, {0: "+", 1: "~"}),
+        ("unknown label is dropped", {1: "bogus"}, {}),
+        ("empty input yields empty map", {}, {}),
+    ]
+
+    @pytest.mark.parametrize("desc,diff_lines,expected", CASES, ids=[case[0] for case in CASES])
+    def test_resolve_diff_marks(self, desc, diff_lines, expected):
+        "Proves resolve_diff_marks maps 1-based diff labels to 0-based gutter glyphs."
+        assert resolve_diff_marks(diff_lines) == expected

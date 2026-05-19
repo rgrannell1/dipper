@@ -30,3 +30,4 @@ class RunArgs:
     theme: str = DEFAULT_THEME
     files_mode: bool = False
     presets: dict[str, str] = field(default_factory=dict)
+    diff_lines: dict[int, str] = field(default_factory=dict)
