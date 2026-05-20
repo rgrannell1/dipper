@@ -30,6 +30,12 @@ META_HASH_FORMAT = "%%dipper:meta:hash:{hash}%%"
 # Prefix of mark lines in annotations files; used to detect whether a sidecar has any selections
 MARK_LINE_PREFIX = "%%dipper:mark:"
 
+# Prefix of the filepath metadata line; used to detect annotation files by content
+META_FILEPATH_PREFIX = "%%dipper:meta:filepath:"
+
+# Filename suffix dipper uses for annotation sidecars
+ANNOTATION_SUFFIX = ".annotations"
+
 # Sentinel returned by ClipperApp when the user aborts the entire --files batch (ctrl+q)
 ABORT_BATCH = "__abort_batch__"
 

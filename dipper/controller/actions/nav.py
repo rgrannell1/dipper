@@ -13,13 +13,13 @@ from dipper.model.state.queries import next_block_start, next_diff_hunk_start, p
 from dipper.view.modals import CommandModal
 
 
-def jump_to_line(app: ClipperApp, idx: int) -> None:
+def jump_to_line(app: ClipperApp, idx: int, *, center: bool = False) -> None:
     line_count = len(app._model.lines)
     if line_count == 0 or not (0 <= idx < line_count):
         return
     lv = app.line_view()
     lv.index = idx
-    lv.scroll_to_widget(lv.query_one(f"#l{idx}"))
+    lv.scroll_to_widget(lv.query_one(f"#l{idx}"), center=center)
 
 
 def cursor_group(app: ClipperApp) -> int:
@@ -39,7 +39,7 @@ def next_block(app: ClipperApp) -> None:
     if idx is None:
         idx = next_diff_hunk_start(app._model.search.indices, cursor)
     if idx is not None:
-        jump_to_line(app, idx)
+        jump_to_line(app, idx, center=True)
 
 
 def prev_block(app: ClipperApp) -> None:
@@ -49,7 +49,7 @@ def prev_block(app: ClipperApp) -> None:
     if idx is None:
         idx = prev_diff_hunk_start(app._model.search.indices, cursor)
     if idx is not None:
-        jump_to_line(app, idx)
+        jump_to_line(app, idx, center=True)
 
 
 def open_goto_line(app: ClipperApp) -> None:

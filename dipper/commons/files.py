@@ -8,7 +8,14 @@ from pathlib import Path
 from dipper.commons.git import changed_files, changed_lines
 from dipper.commons.help import print_help
 from dipper.commons.loader import is_stale
-from dipper.commons.paths import annotation_path, find_all_files, find_unannotated_files, resolve_output_path, sidecar_has_marks
+from dipper.commons.paths import (
+    annotation_path,
+    find_all_files,
+    find_unannotated_files,
+    is_annotation_file,
+    resolve_output_path,
+    sidecar_has_marks,
+)
 
 
 @dataclass
@@ -35,7 +42,11 @@ def read_source(
     args: argparse.Namespace, parser: argparse.ArgumentParser
 ) -> tuple[str, str | None]:
     if args.file:
-        return Path(args.file).read_text(), args.file
+        fpath = Path(args.file)
+        if is_annotation_file(fpath):
+            print(f"dipper: refusing to annotate an annotation file: {args.file}", file=sys.stderr)
+            sys.exit(1)
+        return fpath.read_text(), args.file
     if sys.stdin.isatty():
         print_help()
         sys.exit(1)
@@ -93,7 +104,7 @@ def prompt_drop_stale(targets: list[FileTarget], assume_yes: bool) -> None:
 def iter_diff_targets(args: argparse.Namespace):
     """Yield a FileTarget for each file changed in the current git diff."""
     for fpath in changed_files(cached=args.cached):
-        if not fpath.exists():
+        if not fpath.exists() or is_annotation_file(fpath):
             continue
         source = read_text_file(fpath)
         if source is None:
@@ -108,6 +119,8 @@ def iter_files_targets(args: argparse.Namespace):
     """Yield a FileTarget for each file in the --files glob batch."""
     candidates = find_all_files(args.files) if args.edit else find_unannotated_files(args.files)
     for fpath in candidates:
+        if is_annotation_file(fpath):
+            continue
         source = read_text_file(fpath)
         if source is None:
             continue

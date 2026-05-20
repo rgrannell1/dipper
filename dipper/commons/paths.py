@@ -4,14 +4,26 @@ import glob
 import sys
 from pathlib import Path
 
-from dipper.commons.constants import MARK_LINE_PREFIX
+from dipper.commons.constants import ANNOTATION_SUFFIX, MARK_LINE_PREFIX, META_FILEPATH_PREFIX
 
 # Sentinel for bare --output (no path given): auto-derive <fpath>.annotations
 AUTO_OUTPUT_SENTINEL = "__auto__"
 
 
 def annotation_path(fpath: Path) -> Path:
-    return Path(str(fpath) + ".annotations")
+    return Path(str(fpath) + ANNOTATION_SUFFIX)
+
+
+def is_annotation_file(fpath: Path) -> bool:
+    """Return True if fpath is a dipper annotation sidecar (by suffix or %%dipper:meta:filepath: header)."""
+    if fpath.name.endswith(ANNOTATION_SUFFIX):
+        return True
+    try:
+        with fpath.open() as handle:
+            first_line = handle.readline()
+    except (OSError, UnicodeDecodeError):
+        return False
+    return first_line.startswith(META_FILEPATH_PREFIX)
 
 
 def resolve_output_path(output_arg: str | None, filename: str | None) -> str | None:

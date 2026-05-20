@@ -1,10 +1,14 @@
+import argparse
 import re
 import tempfile
 from pathlib import Path
 
+import pytest
 from textual.widgets import Label
 
 from dipper.commons.constants import DIPPER_PREFIX, SEPARATOR_LINE
+from dipper.commons.files import iter_files_targets, read_source
+from dipper.commons.paths import is_annotation_file
 from dipper.view.app import ClipperApp, LineListView
 from dipper.view.app_types import RunArgs
 
@@ -684,3 +688,131 @@ class TestSearch:
             await pilot.press("enter")
             await pilot.pause(delay=0.1)
             assert pilot.app._model.search.indices == []
+
+
+class TestAnnotationFileRefusal:
+    def test_is_annotation_file_by_suffix(self, tmp_path):
+        "Proves a file whose name ends in .annotations is recognised by name alone."
+        sidecar = tmp_path / "foo.py.annotations"
+        sidecar.write_text("anything at all\n")
+        assert is_annotation_file(sidecar) is True
+
+    def test_is_annotation_file_by_content(self, tmp_path):
+        "Proves a renamed sidecar is recognised by its %%dipper:meta:filepath: header."
+        masquerade = tmp_path / "looks_like_source.py"
+        masquerade.write_text("%%dipper:meta:filepath:src/main.py%%\nsome content\n")
+        assert is_annotation_file(masquerade) is True
+
+    def test_is_annotation_file_rejects_ordinary_source(self, tmp_path):
+        "Proves a plain source file is not flagged."
+        ordinary = tmp_path / "ordinary.py"
+        ordinary.write_text("def foo():\n    return 1\n")
+        assert is_annotation_file(ordinary) is False
+
+    def test_is_annotation_file_rejects_empty_file(self, tmp_path):
+        "Proves an empty file is treated as not-an-annotation."
+        empty = tmp_path / "empty.py"
+        empty.write_text("")
+        assert is_annotation_file(empty) is False
+
+    def test_read_source_exits_on_annotation_path(self, tmp_path, capsys):
+        "Proves positional .annotations files exit with code 1 and an error message."
+        sidecar = tmp_path / "foo.py.annotations"
+        sidecar.write_text("%%dipper:meta:filepath:foo.py%%\n")
+        args = argparse.Namespace(file=str(sidecar))
+        with pytest.raises(SystemExit) as excinfo:
+            read_source(args, argparse.ArgumentParser())
+        assert excinfo.value.code == 1
+        captured = capsys.readouterr()
+        assert "refusing to annotate an annotation file" in captured.err
+
+    def test_read_source_exits_on_content_match(self, tmp_path, capsys):
+        "Proves a file with a dipper meta header is refused even without the .annotations suffix."
+        masquerade = tmp_path / "looks_like_source.py"
+        masquerade.write_text("%%dipper:meta:filepath:src/main.py%%\n")
+        args = argparse.Namespace(file=str(masquerade))
+        with pytest.raises(SystemExit):
+            read_source(args, argparse.ArgumentParser())
+        assert "refusing to annotate an annotation file" in capsys.readouterr().err
+
+    def test_read_source_passes_ordinary_file(self, tmp_path):
+        "Proves an ordinary source file still loads through read_source."
+        src = tmp_path / "ordinary.py"
+        src.write_text("hello\n")
+        args = argparse.Namespace(file=str(src))
+        source, filename = read_source(args, argparse.ArgumentParser())
+        assert source == "hello\n"
+        assert filename == str(src)
+
+    def test_iter_files_targets_skips_annotation_files(self, tmp_path):
+        "Proves --files glob silently skips .annotations entries instead of opening them."
+        (tmp_path / "a.py").write_text("print(1)\n")
+        (tmp_path / "a.py.annotations").write_text("%%dipper:meta:filepath:a.py%%\n")
+        args = argparse.Namespace(files=str(tmp_path / "*"), edit=False)
+        names = [Path(target.filename).name for target in iter_files_targets(args)]
+        assert names == ["a.py"]
+
+
+class TestJumpRecentre:
+    async def test_next_block_centres_target(self):
+        "Proves > requests a centred scroll on the next-block target."
+        source = "\n".join(f"line{idx}" for idx in range(40))
+        app = ClipperApp(source, RunArgs())
+        async with app.run_test() as pilot:
+            model = pilot.app._model
+            model.set_line_group(25, 1)
+            calls: list[dict] = []
+            lv = pilot.app.line_view()
+            original = lv.scroll_to_widget
+
+            def capture(widget, **kwargs):
+                calls.append(kwargs)
+                return original(widget, **kwargs)
+
+            lv.scroll_to_widget = capture
+            await pilot.press("greater_than_sign")
+            await pilot.pause()
+            assert lv.index == 25
+            assert calls and calls[-1].get("center") is True
+
+    async def test_prev_block_centres_target(self):
+        "Proves < requests a centred scroll on the prev-block target."
+        source = "\n".join(f"line{idx}" for idx in range(40))
+        app = ClipperApp(source, RunArgs())
+        async with app.run_test() as pilot:
+            model = pilot.app._model
+            model.set_line_group(5, 1)
+            lv = pilot.app.line_view()
+            lv.index = 30
+            calls: list[dict] = []
+            original = lv.scroll_to_widget
+
+            def capture(widget, **kwargs):
+                calls.append(kwargs)
+                return original(widget, **kwargs)
+
+            lv.scroll_to_widget = capture
+            await pilot.press("less_than_sign")
+            await pilot.pause()
+            assert lv.index == 5
+            assert calls and calls[-1].get("center") is True
+
+    async def test_g_jump_does_not_centre(self):
+        "Proves ordinary jumps (g/G) leave the centre flag unset."
+        source = "\n".join(f"line{idx}" for idx in range(40))
+        app = ClipperApp(source, RunArgs())
+        async with app.run_test() as pilot:
+            lv = pilot.app.line_view()
+            lv.index = 20
+            calls: list[dict] = []
+            original = lv.scroll_to_widget
+
+            def capture(widget, **kwargs):
+                calls.append(kwargs)
+                return original(widget, **kwargs)
+
+            lv.scroll_to_widget = capture
+            await pilot.press("g")
+            await pilot.pause()
+            assert lv.index == 0
+            assert calls and calls[-1].get("center") is False
