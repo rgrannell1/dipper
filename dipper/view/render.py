@@ -6,7 +6,7 @@ from rich.style import Style
 from rich.text import Text
 from textual.widgets import ListItem, Static
 
-from dipper.commons.constants import GROUP_COLOURS
+from dipper.commons.constants import DEFAULT_SEARCH_COLOUR, GROUP_COLOURS
 from dipper.model.state import AppState, nearest_annotated_block, selected_groups
 
 # --- pure render helpers ---
@@ -122,6 +122,44 @@ def annotation_section_text(model: AppState, cursor_idx: int) -> Text:
     if annotation:
         result.append(f"  |  {annotation}", style="italic dim")
     return result
+
+
+def line_gutter_text(model: AppState, idx: int, gutter_width: int) -> Text:
+    """Line number gutter: coloured by diff per-line colour or search highlight."""
+    one_based = idx + 1
+    line_num = str(one_based).rjust(gutter_width)
+    per_line_colour = model.search.line_colours.get(idx)
+    if per_line_colour:
+        return gutter_text(line_num, highlighted=True, colour=per_line_colour)
+    highlighted = idx in set(model.search.indices)
+    return gutter_text(line_num, highlighted, model.search.colour)
+
+
+def line_mark_text(model: AppState, idx: int) -> Text:
+    """Git-diff gutter glyph for idx, or blank if the line is unchanged."""
+    mark = model.search.line_marks.get(idx)
+    if not mark:
+        return Text("  ")
+    colour = model.search.line_colours.get(idx, DEFAULT_SEARCH_COLOUR)
+    return diff_mark_text(mark, colour)
+
+
+def line_indicator_text(model: AppState, idx: int, group: int) -> Text:
+    """Group dot or anchor diamond for idx."""
+    is_anchor = idx == model.range_fill.anchor
+    return indicator_text(group, model.range_fill.anchor_group, is_anchor)
+
+
+def full_line_text(model: AppState, hi_lines: list[str], idx: int, gutter_width: int) -> Text:
+    """Full rendered line: gutter + diff mark + group indicator + syntax-highlighted source."""
+    line = model.lines[idx]
+    hi_text = Text.from_ansi(hi_lines[idx])
+    if line.group != 0:
+        hi_text.stylize(f"bold {GROUP_COLOURS[line.group]}")
+    gutter = line_gutter_text(model, idx, gutter_width)
+    mark = line_mark_text(model, idx)
+    indicator = line_indicator_text(model, idx, line.group)
+    return Text.assemble(gutter, mark, indicator, hi_text)
 
 
 def status_bar_text(model: AppState, filename: str, cursor_idx: int = 0) -> Text:

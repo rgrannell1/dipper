@@ -8,10 +8,8 @@ from textual.binding import Binding
 from textual.message import Message
 from textual.widgets import ListItem, ListView, Static
 
-from dipper.commons.constants import GROUP_COLOURS
 from dipper.model.state import AppState
-from dipper.model.state.search import DEFAULT_SEARCH_COLOUR
-from dipper.view.render import diff_mark_text, gutter_text, indicator_text
+from dipper.view.render import full_line_text
 
 
 class LineListView(ListView):
@@ -34,40 +32,8 @@ class LineListView(ListView):
             items.append(ListItem(static, id=f"l{idx}"))
         super().__init__(*items)
 
-    def line_gutter(self, idx: int) -> Text:
-        """Line number gutter, coloured per-line (diff) or by search colour."""
-        one_based = idx + 1
-        line_num = str(one_based).rjust(self._gutter_width)
-        per_line_colour = self._model.search.line_colours.get(idx)
-        if per_line_colour:
-            return gutter_text(line_num, highlighted=True, colour=per_line_colour)
-        highlighted = idx in set(self._model.search.indices)
-        return gutter_text(line_num, highlighted, self._model.search.colour)
-
-    def line_mark(self, idx: int) -> Text:
-        """Dedicated git-diff marker column: '+' added, '~' modified, blank otherwise."""
-        mark = self._model.search.line_marks.get(idx)
-        if not mark:
-            return Text("  ")
-        colour = self._model.search.line_colours.get(idx, DEFAULT_SEARCH_COLOUR)
-        return diff_mark_text(mark, colour)
-
-    def indicator(self, idx: int, group: int) -> Text:
-        """Coloured dot showing group membership, or anchor diamond when range-fill is pending."""
-        is_anchor = idx == self._model.range_fill.anchor
-        return indicator_text(group, self._model.range_fill.anchor_group, is_anchor)
-
     def line_text(self, idx: int) -> Text:
-        """Full rendered line: gutter + indicator + syntax-highlighted source text."""
-        line = self._model.lines[idx]
-        hi_text = Text.from_ansi(self._hi_lines[idx])
-        is_annotated = line.group != 0
-        if is_annotated:
-            hi_text.stylize(f"bold {GROUP_COLOURS[line.group]}")
-        gutter = self.line_gutter(idx)
-        mark = self.line_mark(idx)
-        indicator = self.indicator(idx, line.group)
-        return Text.assemble(gutter, mark, indicator, hi_text)
+        return full_line_text(self._model, self._hi_lines, idx, self._gutter_width)
 
     def redraw_line(self, idx: int) -> None:
         """Re-render a single list item from current model state."""
