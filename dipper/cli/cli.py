@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from dipper.cli.flags import build_parser
+from dipper.cli.ls import run_ls
 from dipper.cli.validations import validate_output_flags
 from dipper.commons.config import config_path, parse_config
 from dipper.commons.constants import ABORT_BATCH, BUILTIN_PRESETS, PREV_FILE
@@ -120,13 +121,8 @@ def run_clear(args: argparse.Namespace) -> bool:
     return True
 
 
-def main() -> None:
-    """Orchestrate config loading, argument parsing, source reading, and launch the TUI."""
-    parser = build_parser()
-    args, presets = resolve_config(parser)
-    validate_output_flags(args)
-    if run_clear(args):
-        return
+def run_tui(args: argparse.Namespace, parser: argparse.ArgumentParser, presets: dict[str, str]) -> None:
+    """Resolve targets, handle stale sidecars, and launch the annotation batch."""
     group_names = parse_group_names(resolve_groups(args, presets))
     targets = list(iter_run_targets(args, parser))
     if args.files or args.diff:
@@ -137,3 +133,16 @@ def main() -> None:
         return
     merged_presets = {**BUILTIN_PRESETS, **presets}
     run_batch(args, targets, group_names, merged_presets)
+
+
+def main() -> None:
+    """Orchestrate config loading, argument parsing, source reading, and launch the TUI."""
+    parser = build_parser()
+    args, presets = resolve_config(parser)
+    if args.subcommand == "ls":
+        run_ls(args)
+        return
+    validate_output_flags(args)
+    if run_clear(args):
+        return
+    run_tui(args, parser, presets)
