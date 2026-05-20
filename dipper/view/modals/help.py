@@ -8,37 +8,18 @@ from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
-KEYBINDINGS = [
-    ("tab", "select / deselect line"),
-    ("1-9", "set active group"),
-    ("g / G", "jump to top / bottom"),
-    ("", ""),
-    ("/", "search"),
-    ("> / <", "next / previous block"),
-    ("*", "select all matches"),
-    ("", ""),
-    ("f", "fill range"),
-    ("n", "annotate block"),
-    ("p", "paste last annotation"),
-    ("r", "rename group"),
-    ("o", "groups overview"),
-    ("", ""),
-    ("u", "undo"),
-    ("x", "reset all"),
-    ("q", "write & quit"),
-    ("[ / ]", "prev / next file  (batch mode)"),
-    ("?", "this help"),
-    ("ctrl+p", "command palette"),
-]
+from dipper.view.bindings import BINDING_DEFS
 
 
 def help_table() -> str:
     rows = []
-    for key, description in KEYBINDINGS:
-        if not key:
+    for bd in BINDING_DEFS:
+        if not bd.show_help:
+            continue
+        if not bd.key:
             rows.append("")
         else:
-            rows.append(f"[bold]{key:<12}[/bold] {description}")
+            rows.append(f"[bold]{bd.key:<12}[/bold] {bd.description}")
     return "\n".join(rows)
 
 
@@ -50,7 +31,11 @@ class HelpModal(ModalScreen[None]):
         Binding("question_mark", "dismiss", "Close", show=False),
     ]
     CSS_PATH = str(Path(__file__).parent / "help.tcss")
+    CONTAINER_ID = "help-container"
 
     @override
     def compose(self) -> ComposeResult:
-        yield Static(help_table(), id="help-container")
+        yield Static(help_table(), id=self.CONTAINER_ID)
+
+    def on_mount(self) -> None:
+        self.query_one(f"#{self.CONTAINER_ID}").border_title = "help"

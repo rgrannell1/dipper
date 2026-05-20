@@ -8,7 +8,7 @@ from dipper.cli.flags import build_parser
 from dipper.cli.validations import validate_output_flags
 from dipper.commons.config import config_path, parse_config
 from dipper.commons.constants import ABORT_BATCH, BUILTIN_PRESETS, PREV_FILE
-from dipper.commons.files import FileTarget, iter_run_targets
+from dipper.commons.files import FileTarget, iter_run_targets, prompt_drop_stale
 from dipper.commons.git import changed_files
 from dipper.commons.paths import annotation_path, clear_annotation_sidecars
 from dipper.view.app import run
@@ -129,6 +129,8 @@ def main() -> None:
         return
     group_names = parse_group_names(resolve_groups(args, presets))
     targets = list(iter_run_targets(args, parser))
+    if args.files or args.diff:
+        prompt_drop_stale(targets, args.assume_yes)
     if args.files and not targets:
         label = "annotated" if args.edit else "unannotated"
         print(f"dipper: no {label} files found", file=sys.stderr)

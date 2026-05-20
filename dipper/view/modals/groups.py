@@ -29,6 +29,9 @@ class GroupsModal(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         yield ListView(*[group_row_item(self._model, grp) for grp in range(1, GROUP_COUNT + 1)], id="groups-list")
 
+    def on_mount(self) -> None:
+        self.query_one("#groups-list").border_title = "groups"
+
     def redraw_row(self, group: int) -> None:
         self.query_one(f"#gs-{group}", Static).update(group_row_text(self._model, group))
 

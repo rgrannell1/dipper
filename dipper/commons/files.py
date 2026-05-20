@@ -8,7 +8,7 @@ from pathlib import Path
 from dipper.commons.git import changed_files, changed_lines
 from dipper.commons.help import print_help
 from dipper.commons.loader import is_stale
-from dipper.commons.paths import annotation_path, find_all_files, find_unannotated_files, resolve_output_path
+from dipper.commons.paths import annotation_path, find_all_files, find_unannotated_files, resolve_output_path, sidecar_has_marks
 
 
 @dataclass
@@ -60,6 +60,36 @@ def resolve_load_path(source: str, sidecar: Path, assume_yes: bool) -> str | Non
     return str(sidecar)
 
 
+def find_stale_targets(targets: list[FileTarget]) -> list[FileTarget]:
+    """Return targets whose sidecar is stale and has marks (i.e. non-empty annotations)."""
+    stale = []
+    for target in targets:
+        if not target.load_path:
+            continue
+        sidecar = Path(target.load_path)
+        if not sidecar.exists() or not sidecar_has_marks(sidecar):
+            continue
+        if is_stale(target.source, sidecar.read_text()):
+            stale.append(target)
+    return stale
+
+
+def prompt_drop_stale(targets: list[FileTarget], assume_yes: bool) -> None:
+    """Ask once whether to drop all stale non-empty sidecars, then apply the decision."""
+    stale = find_stale_targets(targets)
+    if not stale:
+        return
+    if not assume_yes:
+        count = len(stale)
+        files_word = "file" if count == 1 else "files"
+        answer = input(f"dipper: {count} annotation {files_word} are stale (source changed). Drop them? [y/N] ")
+        if answer.strip().lower() != "y":
+            return
+    for target in stale:
+        Path(target.load_path).unlink()
+        target.load_path = None
+
+
 def iter_diff_targets(args: argparse.Namespace):
     """Yield a FileTarget for each file changed in the current git diff."""
     for fpath in changed_files(cached=args.cached):
@@ -70,7 +100,7 @@ def iter_diff_targets(args: argparse.Namespace):
             continue
         sidecar = annotation_path(fpath)
         lines = changed_lines(fpath, cached=args.cached)
-        load_path = resolve_load_path(source, sidecar, getattr(args, "assume_yes", False))
+        load_path = str(sidecar) if sidecar.exists() else None
         yield FileTarget(source=source, filename=str(fpath), output_path=str(sidecar), load_path=load_path, diff_lines=lines)
 
 
@@ -82,7 +112,7 @@ def iter_files_targets(args: argparse.Namespace):
         if source is None:
             continue
         sidecar = annotation_path(fpath)
-        load_path = resolve_load_path(source, sidecar, args.assume_yes) if args.edit else None
+        load_path = (str(sidecar) if sidecar.exists() else None) if args.edit else None
         yield FileTarget(source=source, filename=str(fpath), output_path=str(sidecar), load_path=load_path)
 
 
