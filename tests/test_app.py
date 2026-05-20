@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from textual.widgets import Label
 
-from dipper.commons.constants import DIPPER_PREFIX, SEPARATOR_LINE
+from dipper.commons.constants import ABORT_BATCH, DIPPER_PREFIX, SEPARATOR_LINE
 from dipper.commons.files import iter_files_targets, read_source
 from dipper.commons.paths import is_annotation_file
 from dipper.view.app import ClipperApp, LineListView
@@ -816,3 +816,27 @@ class TestJumpRecentre:
             await pilot.pause()
             assert lv.index == 0
             assert calls and calls[-1].get("center") is False
+
+
+class TestBatchModeQuit:
+    async def test_q_in_batch_mode_aborts_without_writing(self, tmp_path):
+        "Proves q in batch mode exits with ABORT_BATCH and does not write the current file."
+        output = tmp_path / "out.annotations"
+        app = ClipperApp(SOURCE, RunArgs(files_mode=True, output_path=str(output)))
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("q")
+            await pilot.pause()
+        assert app._return_value == ABORT_BATCH
+        assert not output.exists()
+
+    async def test_close_bracket_writes_and_advances(self, tmp_path):
+        "Proves ] in batch mode still writes the current file and exits cleanly."
+        output = tmp_path / "out.annotations"
+        app = ClipperApp(SOURCE, RunArgs(files_mode=True, output_path=str(output)))
+        async with app.run_test() as pilot:
+            await pilot.press("tab")
+            await pilot.press("right_square_bracket")
+            await pilot.pause()
+        assert app._return_value is None
+        assert output.exists()

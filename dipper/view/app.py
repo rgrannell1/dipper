@@ -93,12 +93,8 @@ class ClipperApp(App):  # noqa: PLR0904
 
     def on_mount(self) -> None:
         if self._files_mode:
-            self.bind("ctrl+x", "abort_batch", description="Abort batch")
-            self.bind("right_square_bracket", "write_output", description="Next file", show=True)
+            self.bind("right_square_bracket", "next_file", description="Next file", show=True)
             self.bind("left_square_bracket", "prev_file", description="Prev file", show=True)
-
-    def action_abort_batch(self) -> None:
-        self.exit(ABORT_BATCH)
 
     def refresh_status(self) -> None:
         cursor_idx = self.line_view().cursor_index
@@ -168,10 +164,13 @@ class ClipperApp(App):  # noqa: PLR0904
 
     def action_write_output(self) -> None:
         if self._files_mode:
-            self.write_current_file()
-            self.exit(None)
+            self.exit(ABORT_BATCH)
         else:
             self.exit(self.rendered_output())
+
+    def action_next_file(self) -> None:
+        self.write_current_file()
+        self.exit(None)
 
     def action_prev_file(self) -> None:
         self.write_current_file()

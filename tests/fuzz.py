@@ -30,7 +30,7 @@ KEY_ALPHABET: list[tuple[str, int]] = [
     ("x", 3), ("u", 3), ("f", 3),
     ("asterisk", 4), ("greater_than_sign", 4), ("less_than_sign", 4),
     ("n", 2), ("r", 2), ("o", 2), ("question_mark", 2),
-    ("colon", 2), ("slash", 5), ("ctrl+p", 1), ("ctrl+x", 1),
+    ("colon", 2), ("slash", 5), ("ctrl+p", 1),
     ("escape", 5), ("enter", 5), ("q", 2),
     ("a", 1), ("b", 1), ("c", 1), ("d", 1), ("e", 1),
     ("h", 1), ("i", 1), ("j", 1), ("k", 1), ("l", 1),
