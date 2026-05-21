@@ -35,28 +35,31 @@ def add_batch_flags(parser: argparse.ArgumentParser) -> None:
                         help="Drop stale annotation sidecars without prompting")
 
 
-def build_ls_subparser(subparsers) -> None:
-    """Register the ls subcommand."""
-    ls_parser = subparsers.add_parser("ls", help="List annotation sidecars")
-    scope = ls_parser.add_mutually_exclusive_group()
+def build_ls_parser() -> argparse.ArgumentParser:
+    """Build standalone parser for the ls subcommand."""
+    parser = argparse.ArgumentParser(prog="dipper ls", description="List annotation sidecars")
+    scope = parser.add_mutually_exclusive_group()
     scope.add_argument("--files", metavar="GLOB", default=None,
                        help="Limit to files matching GLOB")
     scope.add_argument("--diff", action="store_true", default=False,
                        help="Limit to files in the git working tree diff")
-    ls_parser.add_argument("--cached", action="store_true", default=False,
-                           help="With --diff: use staged changes instead of working tree")
-    output = ls_parser.add_mutually_exclusive_group()
+    parser.add_argument("--cached", action="store_true", default=False,
+                        help="With --diff: use staged changes instead of working tree")
+    output = parser.add_mutually_exclusive_group()
     output.add_argument("--cat", action="store_true", default=False,
                         help="Print raw sidecar contents to stdout")
     output.add_argument("--json", action="store_true", default=False,
                         help="Parse and emit JSON output for each sidecar")
+    return parser
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Build and return the argparse parser for the dipper CLI."""
-    parser = argparse.ArgumentParser(prog="dipper", description="Annotate text interactively")
-    subparsers = parser.add_subparsers(dest="subcommand")
-    build_ls_subparser(subparsers)
+    parser = argparse.ArgumentParser(
+        prog="dipper",
+        description="Annotate text interactively",
+        epilog="Subcommands: dipper ls [--files GLOB] [--diff] [--cat] [--json]",
+    )
     parser.add_argument("file", nargs="?", help="File to annotate (omit to read stdin)")
     parser.add_argument("--prompt", metavar="STR", default=None,
                         help="Subtitle shown in the header bar")

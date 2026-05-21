@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from dipper.cli.flags import build_parser
+from dipper.cli.flags import build_ls_parser, build_parser
 from dipper.cli.ls import run_ls
 from dipper.cli.validations import validate_output_flags
 from dipper.commons.config import config_path, parse_config
@@ -137,11 +137,11 @@ def run_tui(args: argparse.Namespace, parser: argparse.ArgumentParser, presets: 
 
 def main() -> None:
     """Orchestrate config loading, argument parsing, source reading, and launch the TUI."""
+    if len(sys.argv) > 1 and sys.argv[1] == "ls":
+        run_ls(build_ls_parser().parse_args(sys.argv[2:]))
+        return
     parser = build_parser()
     args, presets = resolve_config(parser)
-    if args.subcommand == "ls":
-        run_ls(args)
-        return
     validate_output_flags(args)
     if run_clear(args):
         return
